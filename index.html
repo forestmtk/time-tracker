@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>工数トラッカー</title>
+<style>
+  :root{
+    /* --- 業務日報 / 台帳の質感 --- */
+    --paper:#F7F8FA;        /* 用紙 */
+    --paper-2:#FFFFFF;      /* カード面 */
+    --ink:#1E2A38;          /* 墨 */
+    --ink-soft:#4B5563;     /* 副次テキスト */
+    --rule:#E4E8EE;         /* 罫線 */
+    --rule-strong:#D3D9E2;
+    --figure:#6B7684;       /* 時刻の数字 */
+    --shu:#DC4A2E;          /* 朱 = 今 / 進行中 */
+    --shu-soft:rgba(220,74,46,.10);
+    --shadow:0 1px 2px rgba(30,42,56,.06),0 8px 24px rgba(30,42,56,.08);
+
+    --font-disp:"Yu Mincho","YuMincho","Hiragino Mincho ProN",serif;
+    --font-ui:"Hiragino Kaku Gothic ProN","Yu Gothic","YuGothic","Meiryo",system-ui,sans-serif;
+    --font-mono:"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+
+    --px-min:1.25;          /* 1分あたりの高さ(px) */
+    --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:var(--font-ui);
+    background:var(--paper);
+    color:var(--ink);
+    font-size:14px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column;height:100dvh;overflow:hidden;
+  }
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  input,select{font-family:inherit;font-size:14px}
+  .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+  /* ---------- ヘッダ ---------- */
+  header{
+    flex:0 0 auto;display:flex;align-items:center;gap:10px;
+    padding:12px 16px calc(12px);border-bottom:1px solid var(--rule);
+    background:var(--paper-2);
+  }
+  .today-btn{
+    border:1px solid var(--rule-strong);border-radius:8px;padding:7px 12px;
+    font-size:13px;font-weight:600;color:var(--ink-soft);background:var(--paper-2);
+  }
+  .today-btn:hover{border-color:var(--figure)}
+  .nav{display:flex;align-items:center;gap:2px}
+  .nav button{width:34px;height:34px;border-radius:8px;font-size:18px;color:var(--ink-soft)}
+  .nav button:hover{background:var(--paper)}
+  .date-h{font-family:var(--font-disp);font-size:22px;font-weight:600;letter-spacing:.02em;white-space:nowrap}
+  .date-dow{font-size:14px;color:var(--ink-soft);margin-left:2px}
+  .spacer{flex:1}
+  .icon-btn{
+    width:38px;height:38px;border-radius:9px;border:1px solid var(--rule);
+    display:grid;place-items:center;color:var(--ink-soft);background:var(--paper-2);
+  }
+  .icon-btn:hover{border-color:var(--figure);color:var(--ink)}
+  .icon-btn svg{width:18px;height:18px}
+
+  /* ---------- 作業領域(タイムライン + メモ) ---------- */
+  .work{flex:1 1 auto;display:flex;min-height:0}
+  .scroll{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;position:relative}
+  .side{border-left:1px solid var(--rule);background:var(--paper-2);overflow-y:auto;display:none;min-width:0}
+  @media(min-width:880px){
+    .scroll{flex:0 0 520px}
+    .side{display:block;flex:1 1 auto}
+  }
+  .timeline{position:relative;margin:0;padding:8px 0}
+
+  /* ---------- 右：メモ / 日報パネル ---------- */
+  .side-head{display:flex;align-items:baseline;gap:10px;padding:14px 16px 8px}
+  .side-head h3{margin:0;font-size:14px;font-weight:700}
+  .side-total{margin-left:auto;font-family:var(--font-mono);font-weight:700;font-size:15px;color:var(--ink-soft)}
+  .day-memo{
+    display:block;width:calc(100% - 32px);margin:0 16px 6px;padding:10px 12px;
+    border:1px solid var(--rule-strong);border-radius:10px;background:var(--paper);
+    outline:none;resize:vertical;min-height:52px;line-height:1.6;font-size:13.5px;color:var(--ink);
+  }
+  .day-memo:focus{border-color:var(--figure)}
+  .side-label{font-size:11px;color:var(--figure);font-weight:600;margin:12px 22px 6px}
+  #logRows{padding:0 16px 20px}
+  .log-row{border-bottom:1px solid var(--rule);padding:9px 0}
+  .log-row.running{background:var(--shu-soft);margin:0 -8px;padding:9px 8px;border-radius:8px;border-bottom:none}
+  .log-top{display:flex;align-items:center;gap:8px;cursor:pointer}
+  .log-top:hover .log-cli{text-decoration:underline}
+  .log-dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+  .log-time{font-size:12px;color:var(--figure);flex:0 0 auto}
+  .log-cli{font-size:13px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .log-dur{font-size:12px;color:var(--ink-soft);flex:0 0 auto}
+  .log-task{font-size:12px;color:var(--ink-soft);cursor:pointer;margin:2px 0 4px 18px}
+  .log-memo{
+    display:block;width:calc(100% - 18px);margin-left:18px;padding:6px 9px;
+    border:1px solid transparent;border-radius:8px;background:var(--paper);
+    outline:none;resize:none;overflow:hidden;line-height:1.55;font-size:12.5px;color:var(--ink);min-height:32px;
+  }
+  .log-memo::placeholder{color:var(--figure)}
+  .log-memo:focus{border-color:var(--figure);background:var(--paper-2)}
+  .grid{position:relative;margin-left:56px;margin-right:14px}
+  .hour-row{position:absolute;left:0;right:0;border-top:1px solid var(--rule)}
+  .hour-label{
+    position:absolute;left:-56px;width:48px;text-align:right;
+    transform:translateY(-8px);font-size:12px;color:var(--figure);
+  }
+  .half-row{position:absolute;left:0;right:0;border-top:1px dashed var(--rule)}
+
+  .block{
+    position:absolute;border-radius:8px;overflow:hidden;cursor:pointer;
+    padding:5px 9px;color:#fff;box-shadow:var(--shadow);
+    transition:filter .12s;min-height:22px;
+    border:1px solid rgba(255,255,255,.18);
+  }
+  .block:hover{filter:brightness(1.05)}
+  .block .b-client{font-size:12px;font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .block .b-task{font-size:11px;opacity:.92;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .block .b-dur{font-size:10px;opacity:.8;font-family:var(--font-mono)}
+  .block.running{border:1px solid rgba(255,255,255,.5)}
+  .block.running::after{
+    content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:#fff;
+    animation:pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+
+  /* 今 */
+  .now-line{position:absolute;left:-56px;right:0;height:0;border-top:2px solid var(--shu);z-index:5;pointer-events:none}
+  .now-flag{
+    position:absolute;left:-56px;transform:translateY(-9px);
+    background:var(--shu);color:#fff;font-size:10px;font-weight:700;
+    padding:1px 6px;border-radius:4px 4px 4px 0;font-family:var(--font-mono);
+    pointer-events:none;
+  }
+  .now-dot{position:absolute;left:-4px;transform:translateY(-4px);width:8px;height:8px;border-radius:50%;background:var(--shu);z-index:6;pointer-events:none}
+  .ghost{
+    position:absolute;left:0;right:0;background:var(--shu-soft);
+    border:1.5px dashed var(--shu);border-radius:8px;z-index:4;pointer-events:none;
+  }
+
+  .empty-hint{
+    position:absolute;left:0;right:0;top:40%;text-align:center;color:var(--figure);
+    font-size:13px;pointer-events:none;padding:0 20px;
+  }
+
+  /* ---------- 集計バー ---------- */
+  .summary{
+    flex:0 0 auto;border-top:1px solid var(--rule);background:var(--paper-2);
+    padding:10px 16px;max-height:34vh;overflow-y:auto;display:none;
+  }
+  .summary.open{display:block}
+  .sum-head{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+  .sum-head h3{margin:0;font-size:13px;font-weight:700}
+  .sum-total{margin-left:auto;font-family:var(--font-mono);font-weight:700;font-size:15px}
+  .sum-row{display:flex;align-items:center;gap:8px;margin:5px 0}
+  .sum-dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+  .sum-name{flex:0 0 42%;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sum-bar-wrap{flex:1;height:8px;background:var(--paper);border-radius:4px;overflow:hidden}
+  .sum-bar{height:100%;border-radius:4px}
+  .sum-time{flex:0 0 auto;font-family:var(--font-mono);font-size:12px;color:var(--ink-soft);width:52px;text-align:right}
+  .sum-sub{margin:8px 0 4px;font-size:11px;color:var(--figure);font-weight:600}
+
+  /* ---------- 下部アクション ---------- */
+  .dock{
+    flex:0 0 auto;padding:10px 16px calc(10px + var(--safe-b));
+    border-top:1px solid var(--rule);background:var(--paper-2);
+    display:flex;gap:10px;
+  }
+  .btn-primary{
+    flex:1;border-radius:12px;padding:14px;font-size:15px;font-weight:700;
+    background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn-primary:hover{background:#111a24}
+  .btn-running{
+    flex:1;border-radius:12px;padding:11px 14px;text-align:left;
+    background:var(--paper);border:1.5px solid var(--shu);display:flex;align-items:center;gap:10px;
+  }
+  .run-dot{width:11px;height:11px;border-radius:50%;background:var(--shu);flex:0 0 auto;animation:pulse 1.6s ease-in-out infinite}
+  .run-meta{flex:1;min-width:0}
+  .run-cli{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .run-task{font-size:11px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .run-elapsed{font-family:var(--font-mono);font-weight:700;font-size:16px;color:var(--shu)}
+  .btn-stop{border-radius:10px;padding:0 16px;background:var(--shu);color:#fff;font-weight:700;font-size:14px}
+  .btn-switch{border-radius:10px;padding:0 14px;border:1px solid var(--rule-strong);color:var(--ink-soft);font-weight:600}
+  .sum-toggle{margin-left:auto}
+
+  /* ---------- シート / モーダル ---------- */
+  .scrim{position:fixed;inset:0;background:rgba(30,42,56,.38);z-index:40;display:none;opacity:0;transition:opacity .18s}
+  .scrim.open{display:block;opacity:1}
+  .sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--paper-2);
+    border-radius:18px 18px 0 0;box-shadow:0 -8px 40px rgba(30,42,56,.2);
+    max-height:82dvh;display:flex;flex-direction:column;
+    transform:translateY(100%);transition:transform .22s cubic-bezier(.2,.8,.2,1);
+    padding-bottom:var(--safe-b);
+  }
+  .sheet.open{transform:translateY(0)}
+  .sheet-grip{width:38px;height:4px;border-radius:2px;background:var(--rule-strong);margin:10px auto 4px}
+  .sheet-head{display:flex;align-items:center;padding:6px 18px 10px;gap:10px}
+  .sheet-head h2{margin:0;font-size:16px;font-weight:700}
+  .sheet-head .back{font-size:20px;color:var(--ink-soft);width:30px;height:30px;border-radius:8px}
+  .sheet-head .back:hover{background:var(--paper)}
+  .sheet-body{overflow-y:auto;padding:0 14px 16px}
+
+  .search{
+    width:100%;padding:11px 14px;border:1px solid var(--rule-strong);border-radius:10px;
+    background:var(--paper);margin:0 0 10px;outline:none;
+  }
+  .search:focus{border-color:var(--figure)}
+  .list-label{font-size:11px;color:var(--figure);font-weight:600;margin:12px 6px 6px}
+  .pick{
+    width:100%;display:flex;align-items:center;gap:11px;padding:12px 12px;border-radius:10px;
+    text-align:left;margin-bottom:4px;
+  }
+  .pick:hover{background:var(--paper)}
+  .pick .dot{width:13px;height:13px;border-radius:4px;flex:0 0 auto}
+  .pick .code{font-family:var(--font-mono);font-size:12px;color:var(--figure);flex:0 0 auto;min-width:34px}
+  .pick .nm{font-size:14px;font-weight:600}
+  .pick.special .nm{color:var(--ink-soft)}
+
+  .chip-wrap{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{
+    padding:11px 15px;border-radius:10px;border:1px solid var(--rule-strong);
+    background:var(--paper);font-size:14px;font-weight:600;
+  }
+  .chip:hover{border-color:var(--figure)}
+
+  .field{margin:12px 4px}
+  .field label{display:block;font-size:11px;color:var(--figure);font-weight:600;margin-bottom:5px}
+  .field input,.field select,.field textarea{
+    width:100%;padding:11px 12px;border:1px solid var(--rule-strong);border-radius:10px;
+    background:var(--paper);outline:none;
+  }
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--figure)}
+  .row2{display:flex;gap:10px}.row2 .field{flex:1}
+  .actions{display:flex;gap:10px;margin:16px 4px 4px}
+  .btn-fill{flex:1;padding:13px;border-radius:11px;background:var(--ink);color:#fff;font-weight:700;font-size:14px}
+  .btn-fill:hover{background:#111a24}
+  .btn-ghost{padding:13px 16px;border-radius:11px;border:1px solid var(--rule-strong);color:var(--ink-soft);font-weight:600}
+  .btn-danger{padding:13px 16px;border-radius:11px;border:1px solid rgba(220,74,46,.4);color:var(--shu);font-weight:600;background:var(--shu-soft)}
+
+  .color-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+  .color-cell{width:30px;height:30px;border-radius:8px;border:2px solid transparent}
+  .color-cell.sel{border-color:var(--ink);box-shadow:0 0 0 2px #fff inset}
+
+  .settings-cli{display:flex;align-items:center;gap:10px;padding:9px 8px;border-bottom:1px solid var(--rule)}
+  .settings-cli .dot{width:14px;height:14px;border-radius:4px;flex:0 0 auto}
+  .settings-cli .code{font-family:var(--font-mono);font-size:12px;color:var(--figure);min-width:36px}
+  .settings-cli .nm{flex:1;font-size:14px;font-weight:600}
+  .settings-cli .edit{color:var(--figure);font-size:13px;padding:6px 8px;border-radius:7px}
+  .settings-cli .edit:hover{background:var(--paper)}
+  .seg{display:flex;gap:0;border:1px solid var(--rule-strong);border-radius:10px;overflow:hidden;margin:6px 4px 14px}
+  .seg button{flex:1;padding:10px;font-size:13px;font-weight:600;color:var(--ink-soft)}
+  .seg button.on{background:var(--ink);color:#fff}
+  textarea.bulk{min-height:120px;resize:vertical;line-height:1.7;font-family:var(--font-mono);font-size:13px}
+  .hint{font-size:12px;color:var(--figure);margin:6px 4px}
+  .tasklist-item{display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--rule)}
+  .tasklist-item .nm{flex:1}
+  .tasklist-item .x{color:var(--shu);padding:6px 9px;border-radius:7px;font-size:16px}
+  .tasklist-item .x:hover{background:var(--shu-soft)}
+  .add-inline{display:flex;gap:8px;margin-top:8px}
+  .add-inline input{flex:1}
+  .add-inline button{padding:0 16px;border-radius:9px;background:var(--ink);color:#fff;font-weight:700}
+
+  .toast{
+    position:fixed;left:50%;bottom:calc(90px + var(--safe-b));transform:translateX(-50%) translateY(12px);
+    background:var(--ink);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;
+    z-index:60;opacity:0;transition:all .2s;pointer-events:none;box-shadow:var(--shadow);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<header>
+  <button class="today-btn" id="todayBtn">今日</button>
+  <div class="nav">
+    <button id="prevBtn" aria-label="前日">‹</button>
+    <button id="nextBtn" aria-label="翌日">›</button>
+  </div>
+  <div>
+    <span class="date-h" id="dateH"></span>
+    <span class="date-dow" id="dateDow"></span>
+  </div>
+  <div class="spacer"></div>
+  <button class="icon-btn" id="sumBtn" aria-label="集計">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+  </button>
+  <button class="icon-btn" id="setBtn" aria-label="設定">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+</header>
+
+<div class="work">
+  <div class="scroll" id="scroll">
+    <div class="timeline">
+      <div class="grid" id="grid"></div>
+    </div>
+  </div>
+  <aside class="side" id="side"></aside>
+</div>
+
+<div class="summary" id="summary"></div>
+
+<div class="dock" id="dock"></div>
+
+<!-- シート群 -->
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-grip"></div>
+  <div class="sheet-head" id="sheetHead"></div>
+  <div class="sheet-body" id="sheetBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   工数トラッカー  v0.1
+   縦型タイムライン / 顧問先別 工数記録
+   単一HTML・LocalStorage保存
+============================================================ */
+
+const STORE_KEY = "timeTracker.v1";
+const VIEW_START_H = 6;    // タイムライン表示開始
+const VIEW_END_H   = 22;   // 表示終了
+const PX_MIN = 1.25;       // 1分あたり px
+
+/* 顧問先の色パレット(落ち着いた識別色) */
+const PALETTE = [
+  "#3E6D9C","#5B8A72","#B07C3E","#7C5C93","#4E8C8A","#A8574F",
+  "#556B8D","#6E8B3D","#9C6B4E","#4B5D8F","#A55A7A","#7A8A4E",
+  "#3D7A8C","#8C6D3D","#6B5B95","#5E8A5E","#994D5C","#4C7A6B"
+];
+const COLOR_INTERNAL   = "#5A6472"; // 社内作業
+const COLOR_UNASSIGNED = "#8A93A0"; // 顧問先なし
+
+/* 業務内容の初期候補 */
+const DEFAULT_TASKS = {
+  client:   ["申告書作成","記帳・仕訳チェック","給与計算","決算・決算見込","消費税","相談・打合せ","資料作成","メール・電話"],
+  internal: ["試験勉強(相続税)","システム開発","事務所内業務","その他"]
+};
+
+/* ---------- 状態 ---------- */
+let state = load();
+
+function defaultState(){
+  return {
+    version:1,
+    clients:[
+      {id:"internal", kind:"internal",   code:"",    name:"社内作業",   color:COLOR_INTERNAL},
+      {id:"none",     kind:"unassigned", code:"",    name:"顧問先なし", color:COLOR_UNASSIGNED},
+      {id:uid(),      kind:"client",     code:"407", name:"Cyres",     color:PALETTE[0]}
+    ],
+    tasks:{client:[...DEFAULT_TASKS.client], internal:[...DEFAULT_TASKS.internal]},
+    entries:[], // {id, clientId, task, start:ms, end:ms|null, memo:""}
+    dayMemos:{} // {"YYYY-MM-DD": text}
+  };
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(STORE_KEY);
+    if(!raw) return defaultState();
+    const s=JSON.parse(raw);
+    if(!s||!s.clients||!s.entries) return defaultState();
+    if(!s.tasks) s.tasks={client:[...DEFAULT_TASKS.client],internal:[...DEFAULT_TASKS.internal]};
+    if(!s.dayMemos) s.dayMemos={};
+    return s;
+  }catch(e){ return defaultState(); }
+}
+function save(){ try{ localStorage.setItem(STORE_KEY,JSON.stringify(state)); }catch(e){} }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* ---------- 日付ユーティリティ ---------- */
+let selDate = startOfDay(new Date());
+function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
+function isSameDay(a,b){ return startOfDay(a).getTime()===startOfDay(b).getTime(); }
+function dateKey(d){ d=startOfDay(d); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function fmtTime(ms){ const d=new Date(ms); return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+function fmtDur(min){
+  min=Math.max(0,Math.round(min));
+  const h=Math.floor(min/60), m=min%60;
+  if(h===0) return m+"分";
+  return h+"時間"+(m?m+"分":"");
+}
+function fmtDurShort(min){
+  min=Math.max(0,Math.round(min)); const h=Math.floor(min/60),m=min%60;
+  return (h?h+":":"")+String(m).padStart(h?2:1,"0");
+}
+
+/* ---------- 顧問先ヘルパ ---------- */
+function getClient(id){ return state.clients.find(c=>c.id===id)||state.clients[0]; }
+function taskSetFor(client){ return client.kind==="internal" ? "internal":"client"; }
+function runningEntry(){ return state.entries.find(e=>e.end===null); }
+
+/* ============================================================
+   描画：タイムライン
+============================================================ */
+const grid=document.getElementById("grid");
+const scroll=document.getElementById("scroll");
+
+function laneLayout(entries){
+  // 開始順に並べ、重なりを列に振り分け
+  const items=entries.map(e=>({e,s:e.start,en:e.end||Date.now()})).sort((a,b)=>a.s-b.s);
+  let clusters=[],cur=[],curEnd=-1;
+  for(const it of items){
+    if(it.s>=curEnd && cur.length){ clusters.push(cur); cur=[]; curEnd=-1; }
+    cur.push(it); curEnd=Math.max(curEnd,it.en);
+  }
+  if(cur.length) clusters.push(cur);
+  const layout=new Map();
+  for(const cl of clusters){
+    const cols=[]; // each col: last end time
+    for(const it of cl){
+      let placed=-1;
+      for(let i=0;i<cols.length;i++){ if(it.s>=cols[i]){ placed=i; cols[i]=it.en; break; } }
+      if(placed<0){ placed=cols.length; cols.push(it.en); }
+      layout.set(it.e.id,{col:placed});
+    }
+    const total=cols.length;
+    for(const it of cl) layout.get(it.e.id).total=total;
+  }
+  return layout;
+}
+
+function renderTimeline(){
+  grid.innerHTML="";
+  const dayStart=startOfDay(selDate).getTime();
+  const viewTop=dayStart+VIEW_START_H*3600000;
+  const totalMin=(VIEW_END_H-VIEW_START_H)*60;
+  grid.style.height=(totalMin*PX_MIN)+"px";
+
+  // 時間罫線
+  for(let h=VIEW_START_H;h<=VIEW_END_H;h++){
+    const y=(h-VIEW_START_H)*60*PX_MIN;
+    const row=document.createElement("div");
+    row.className="hour-row"; row.style.top=y+"px";
+    const lab=document.createElement("div");
+    lab.className="hour-label mono"; lab.textContent=String(h).padStart(2,"0")+":00";
+    row.appendChild(lab); grid.appendChild(row);
+    if(h<VIEW_END_H){
+      const half=document.createElement("div");
+      half.className="half-row"; half.style.top=(y+30*PX_MIN)+"px"; grid.appendChild(half);
+    }
+  }
+
+  // 当日エントリ
+  const dayEntries=state.entries.filter(e=>isSameDay(new Date(e.start),selDate));
+  if(dayEntries.length===0){
+    const hint=document.createElement("div");
+    hint.className="empty-hint";
+    hint.textContent="この日の記録はまだありません。下の「開始」から計測するか、空いている時間帯をタップして後から追加できます。";
+    grid.appendChild(hint);
+  }
+  const layout=laneLayout(dayEntries);
+
+  for(const e of dayEntries){
+    const cli=getClient(e.clientId);
+    const end=e.end||Date.now();
+    const sMin=(e.start-viewTop)/60000;
+    const eMin=(end-viewTop)/60000;
+    const top=Math.max(0,sMin*PX_MIN);
+    const h=Math.max(22,(eMin-sMin)*PX_MIN);
+    const lay=layout.get(e.id)||{col:0,total:1};
+    const gap=3;
+    const wPct=100/lay.total;
+    const el=document.createElement("div");
+    el.className="block"+(e.end===null?" running":"");
+    el.style.top=top+"px"; el.style.height=h+"px";
+    el.style.left=`calc(${lay.col*wPct}% + ${lay.col?gap/2:0}px)`;
+    el.style.width=`calc(${wPct}% - ${gap}px)`;
+    el.style.background=cli.color;
+    const durMin=(end-e.start)/60000;
+    const cliLabel=(cli.code?cli.code+" ":"")+cli.name;
+    el.innerHTML=`<div class="b-client">${esc(cliLabel)}</div>`+
+                 (h>34?`<div class="b-task">${esc(e.task||"")}</div>`:"")+
+                 (h>50?`<div class="b-dur mono">${fmtTime(e.start)}–${e.end?fmtTime(end):"進行中"} · ${fmtDurShort(durMin)}</div>`:"");
+    el.onclick=()=>openEditEntry(e.id);
+    grid.appendChild(el);
+  }
+
+  // 今ライン
+  const now=Date.now();
+  if(isSameDay(new Date(now),selDate)){
+    const nowMin=(now-viewTop)/60000;
+    if(nowMin>=0 && nowMin<=totalMin){
+      const y=nowMin*PX_MIN;
+      const line=document.createElement("div"); line.className="now-line"; line.style.top=y+"px"; grid.appendChild(line);
+      const flag=document.createElement("div"); flag.className="now-flag mono"; flag.style.top=y+"px"; flag.textContent=fmtTime(now); grid.appendChild(flag);
+      const dot=document.createElement("div"); dot.className="now-dot"; dot.style.top=y+"px"; grid.appendChild(dot);
+    }
+  }
+}
+
+function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* ============================================================
+   ヘッダ / 日付
+============================================================ */
+const DOW=["日","月","火","水","木","金","土"];
+function renderHeader(){
+  document.getElementById("dateH").textContent=(selDate.getMonth()+1)+"月"+selDate.getDate()+"日";
+  document.getElementById("dateDow").textContent="("+DOW[selDate.getDay()]+")";
+}
+document.getElementById("todayBtn").onclick=()=>{ selDate=startOfDay(new Date()); renderAll(); scrollToRelevant(); };
+document.getElementById("prevBtn").onclick=()=>{ selDate=new Date(selDate.getTime()-86400000); renderAll(); };
+document.getElementById("nextBtn").onclick=()=>{ selDate=new Date(selDate.getTime()+86400000); renderAll(); };
+
+/* ============================================================
+   下部ドック
+============================================================ */
+const dock=document.getElementById("dock");
+function renderDock(){
+  const run=runningEntry();
+  dock.innerHTML="";
+  if(!run){
+    const b=document.createElement("button");
+    b.className="btn-primary";
+    b.innerHTML=`<span style="font-size:18px">●</span> 計測を開始`;
+    b.onclick=()=>openStartFlow();
+    dock.appendChild(b);
+  }else{
+    const cli=getClient(run.clientId);
+    const wrap=document.createElement("button");
+    wrap.className="btn-running";
+    wrap.onclick=()=>openEditEntry(run.id);
+    wrap.innerHTML=`<span class="run-dot"></span>
+      <span class="run-meta">
+        <span class="run-cli">${esc((cli.code?cli.code+" ":"")+cli.name)}</span>
+        <span class="run-task">${esc(run.task||"")}</span>
+      </span>
+      <span class="run-elapsed mono" id="runElapsed"></span>`;
+    dock.appendChild(wrap);
+
+    const sw=document.createElement("button");
+    sw.className="btn-switch"; sw.textContent="切替";
+    sw.onclick=()=>openStartFlow();
+    dock.appendChild(sw);
+
+    const st=document.createElement("button");
+    st.className="btn-stop"; st.textContent="停止";
+    st.onclick=()=>{ stopRunning(); toast("計測を停止しました"); };
+    dock.appendChild(st);
+  }
+  updateElapsed();
+}
+function updateElapsed(){
+  const run=runningEntry(); const el=document.getElementById("runElapsed");
+  if(run&&el){ el.textContent=fmtDurShort((Date.now()-run.start)/60000); }
+}
+
+/* ============================================================
+   計測 開始 / 停止 / 切替
+============================================================ */
+function stopRunning(){
+  const run=runningEntry();
+  if(run){ run.end=Date.now(); save(); }
+  renderAll();
+}
+function startTracking(clientId,task){
+  const now=Date.now();
+  const run=runningEntry();
+  if(run) run.end=now;               // 前の記録を締める
+  state.entries.push({id:uid(),clientId,task,start:now,end:null,memo:""});
+  save();
+  selDate=startOfDay(new Date());
+  renderAll(); scrollToRelevant();
+}
+
+/* ============================================================
+   シート基盤
+============================================================ */
+const scrim=document.getElementById("scrim");
+const sheet=document.getElementById("sheet");
+const sheetHead=document.getElementById("sheetHead");
+const sheetBody=document.getElementById("sheetBody");
+function openSheet(){ scrim.classList.add("open"); sheet.classList.add("open"); }
+function closeSheet(){ scrim.classList.remove("open"); sheet.classList.remove("open"); }
+scrim.onclick=closeSheet;
+
+/* ---- 開始フロー：顧問先を選ぶ → 業務内容を選ぶ ---- */
+function openStartFlow(){
+  renderClientPicker();
+  openSheet();
+}
+function renderClientPicker(){
+  sheetHead.innerHTML=`<h2>顧問先を選ぶ</h2>`;
+  sheetBody.innerHTML=`<input class="search" id="cliSearch" placeholder="コードまたは社名で検索" autocomplete="off">
+    <div id="cliList"></div>`;
+  const inp=document.getElementById("cliSearch");
+  const draw=()=>{
+    const q=(inp.value||"").trim().toLowerCase();
+    const list=document.getElementById("cliList"); list.innerHTML="";
+    const specials=state.clients.filter(c=>c.kind!=="client");
+    const clients=state.clients.filter(c=>c.kind==="client")
+      .filter(c=>!q||c.name.toLowerCase().includes(q)||c.code.toLowerCase().includes(q))
+      .sort((a,b)=>(a.code||"").localeCompare(b.code||"",undefined,{numeric:true}));
+    if(!q){
+      specials.forEach(c=>list.appendChild(pickRow(c,true)));
+      const lab=document.createElement("div"); lab.className="list-label"; lab.textContent="顧問先"; list.appendChild(lab);
+    }
+    clients.forEach(c=>list.appendChild(pickRow(c,false)));
+    if(clients.length===0 && q){
+      const none=document.createElement("div"); none.className="hint"; none.textContent="該当なし。設定から追加できます。"; list.appendChild(none);
+    }
+  };
+  inp.oninput=draw; draw();
+}
+function pickRow(c,special){
+  const b=document.createElement("button");
+  b.className="pick"+(special?" special":"");
+  b.innerHTML=`<span class="dot" style="background:${c.color}"></span>
+    <span class="code mono">${esc(c.code)}</span>
+    <span class="nm">${esc(c.name)}</span>`;
+  b.onclick=()=>renderTaskPicker(c);
+  return b;
+}
+function renderTaskPicker(client){
+  const setKey=taskSetFor(client);
+  sheetHead.innerHTML=`<button class="back" id="backCli">‹</button><h2>${esc((client.code?client.code+" ":"")+client.name)}</h2>`;
+  document.getElementById("backCli").onclick=renderClientPicker;
+  const tasks=state.tasks[setKey];
+  sheetBody.innerHTML=`<div class="list-label">業務内容を選ぶ</div><div class="chip-wrap" id="taskChips"></div>
+    <div class="add-inline"><input id="customTask" placeholder="その他の業務を入力" autocomplete="off"><button id="customGo">開始</button></div>`;
+  const wrap=document.getElementById("taskChips");
+  tasks.forEach(t=>{
+    const c=document.createElement("button"); c.className="chip"; c.textContent=t;
+    c.onclick=()=>{ closeSheet(); startTracking(client.id,t); toast("計測を開始しました"); };
+    wrap.appendChild(c);
+  });
+  const go=()=>{ const v=document.getElementById("customTask").value.trim(); if(!v)return; closeSheet(); startTracking(client.id,v); toast("計測を開始しました"); };
+  document.getElementById("customGo").onclick=go;
+  document.getElementById("customTask").addEventListener("keydown",e=>{ if(e.key==="Enter")go(); });
+}
+
+/* ---- 空白タップ / ドラッグで記録を追加 ---- */
+let dragSel=null, suppressGridClick=false;
+function yToMs(y){
+  const viewTop=startOfDay(selDate).getTime()+VIEW_START_H*3600000;
+  let min=y/PX_MIN;
+  min=Math.max(0,Math.min((VIEW_END_H-VIEW_START_H)*60,min));
+  min=Math.round(min/5)*5;            // 5分刻みにスナップ
+  return viewTop+min*60000;
+}
+grid.addEventListener("mousedown",ev=>{
+  if(ev.button!==0) return;
+  if(ev.target.closest(".block")) return;   // 既存ブロック上は対象外
+  const rect=grid.getBoundingClientRect();
+  dragSel={y0:ev.clientY-rect.top,ghost:null,moved:false};
+});
+window.addEventListener("mousemove",ev=>{
+  if(!dragSel) return;
+  const rect=grid.getBoundingClientRect();
+  const y=ev.clientY-rect.top;
+  if(Math.abs(y-dragSel.y0)>6) dragSel.moved=true;
+  if(!dragSel.moved) return;
+  if(!dragSel.ghost){ const g=document.createElement("div"); g.className="ghost"; grid.appendChild(g); dragSel.ghost=g; }
+  dragSel.ghost.style.top=Math.min(y,dragSel.y0)+"px";
+  dragSel.ghost.style.height=Math.max(8,Math.abs(y-dragSel.y0))+"px";
+});
+window.addEventListener("mouseup",ev=>{
+  if(!dragSel) return;
+  const st=dragSel; dragSel=null;
+  if(st.ghost) st.ghost.remove();
+  if(st.moved){
+    suppressGridClick=true; setTimeout(()=>suppressGridClick=false,60);
+    const rect=grid.getBoundingClientRect();
+    const y1=ev.clientY-rect.top;
+    let a=yToMs(Math.min(st.y0,y1)), b=yToMs(Math.max(st.y0,y1));
+    if(b-a<5*60000) b=a+30*60000;
+    openCreateEntry(a,b);
+  }
+});
+grid.addEventListener("click",ev=>{
+  if(suppressGridClick) return;                 // ドラッグ直後のclickは無視
+  if(ev.target.closest(".block")) return;       // ブロックのタップは編集へ
+  const rect=grid.getBoundingClientRect();
+  const s=yToMs(ev.clientY-rect.top);
+  openCreateEntry(s,s+30*60000);                // タップは仮に30分枠
+});
+
+function openCreateEntry(startMs,endMs){
+  const cliOpts=state.clients.map(c=>`<option value="${c.id}">${esc((c.code?c.code+" ":"")+c.name)}</option>`).join("");
+  sheetHead.innerHTML=`<button class="back" id="backNew">‹</button><h2>記録を追加</h2>`;
+  sheetBody.innerHTML=`
+    <div class="field"><label>顧問先</label><select id="nwCli">${cliOpts}</select></div>
+    <div class="field"><label>業務内容</label><input id="nwTask" list="nwDL" placeholder="訪問・打合せ など" autocomplete="off"><datalist id="nwDL"></datalist></div>
+    <div class="row2">
+      <div class="field"><label>開始</label><input type="time" id="nwStart" value="${fmtTime(startMs)}"></div>
+      <div class="field"><label>終了</label><input type="time" id="nwEnd" value="${fmtTime(endMs)}"></div>
+    </div>
+    <div class="field"><label>メモ</label><textarea id="nwMemo" rows="2" placeholder="用件・申し送りなど"></textarea></div>
+    <div class="actions">
+      <button class="btn-fill" id="nwSave">追加</button>
+      <button class="btn-ghost" id="nwCancel">キャンセル</button>
+    </div>`;
+  document.getElementById("backNew").onclick=closeSheet;
+  document.getElementById("nwCancel").onclick=closeSheet;
+  const fillDL=()=>{ const c=getClient(document.getElementById("nwCli").value);
+    document.getElementById("nwDL").innerHTML=state.tasks[taskSetFor(c)].map(t=>`<option value="${esc(t)}">`).join(""); };
+  document.getElementById("nwCli").onchange=fillDL; fillDL();
+  document.getElementById("nwSave").onclick=()=>{
+    const sv=document.getElementById("nwStart").value, evv=document.getElementById("nwEnd").value;
+    if(!sv||!evv){ toast("時刻を入力してください"); return; }
+    const base=startOfDay(selDate);
+    const p=v=>{ const [h,m]=v.split(":").map(Number); return new Date(base.getFullYear(),base.getMonth(),base.getDate(),h||0,m||0).getTime(); };
+    let s=p(sv), e2=p(evv); if(e2<=s) e2+=86400000;   // 日跨ぎ
+    state.entries.push({id:uid(),clientId:document.getElementById("nwCli").value,
+      task:document.getElementById("nwTask").value.trim(),start:s,end:e2,
+      memo:document.getElementById("nwMemo").value});
+    save(); closeSheet(); renderAll(); toast("記録を追加しました");
+  };
+  openSheet();
+}
+
+/* ---- エントリ編集 ---- */
+function openEditEntry(id){
+  const e=state.entries.find(x=>x.id===id); if(!e)return;
+  const cli=getClient(e.clientId);
+  const running=e.end===null;
+  const dayStr=(()=>{ const d=new Date(e.start); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); })();
+  sheetHead.innerHTML=`<button class="back" id="backEdit">‹</button><h2>記録を修正</h2>`;
+  document.getElementById("backEdit").onclick=closeSheet;
+
+  const cliOpts=state.clients.map(c=>`<option value="${c.id}" ${c.id===e.clientId?"selected":""}>${esc((c.code?c.code+" ":"")+c.name)}</option>`).join("");
+  sheetBody.innerHTML=`
+    <div class="field"><label>顧問先</label><select id="edCli">${cliOpts}</select></div>
+    <div class="field"><label>業務内容</label>
+      <input id="edTask" list="taskDL" value="${esc(e.task||"")}" autocomplete="off">
+      <datalist id="taskDL"></datalist>
+    </div>
+    <div class="row2">
+      <div class="field"><label>開始</label><input type="time" id="edStart" value="${fmtTime(e.start)}"></div>
+      <div class="field"><label>終了</label><input type="time" id="edEnd" value="${e.end?fmtTime(e.end):""}" ${running?"disabled":""}></div>
+    </div>
+    ${running?`<div class="hint">この記録は進行中です。終了時刻は「停止」で確定します。</div>`:""}
+    <div class="field"><label>メモ</label><textarea id="edMemo" rows="3" placeholder="この作業のメモ(申し送り・次回確認事項など)">${esc(e.memo||"")}</textarea></div>
+    <div class="actions">
+      <button class="btn-fill" id="edSave">保存</button>
+      ${running?`<button class="btn-ghost" id="edStop">停止</button>`:""}
+      <button class="btn-danger" id="edDel">削除</button>
+    </div>`;
+  // datalist を顧問先種別に追随
+  const fillDL=()=>{ const c=getClient(document.getElementById("edCli").value); const set=state.tasks[taskSetFor(c)];
+    document.getElementById("taskDL").innerHTML=set.map(t=>`<option value="${esc(t)}">`).join(""); };
+  document.getElementById("edCli").onchange=fillDL; fillDL();
+
+  document.getElementById("edSave").onclick=()=>{
+    e.clientId=document.getElementById("edCli").value;
+    e.task=document.getElementById("edTask").value.trim();
+    e.memo=document.getElementById("edMemo").value;
+    const [sh,sm]=document.getElementById("edStart").value.split(":").map(Number);
+    const base=dayStr.split("-").map(Number);
+    const sd=new Date(base[0],base[1]-1,base[2],sh||0,sm||0,0,0); e.start=sd.getTime();
+    if(!running){
+      const ev=document.getElementById("edEnd").value;
+      if(ev){ const [eh,em]=ev.split(":").map(Number); let ed=new Date(base[0],base[1]-1,base[2],eh,em,0,0);
+        if(ed.getTime()<e.start) ed=new Date(ed.getTime()+86400000); // 日跨ぎ
+        e.end=ed.getTime(); }
+    }
+    save(); closeSheet(); renderAll(); toast("修正を保存しました");
+  };
+  const stopEl=document.getElementById("edStop"); if(stopEl) stopEl.onclick=()=>{ e.end=Date.now(); save(); closeSheet(); renderAll(); toast("計測を停止しました"); };
+  document.getElementById("edDel").onclick=()=>{
+    state.entries=state.entries.filter(x=>x.id!==e.id); save(); closeSheet(); renderAll(); toast("記録を削除しました");
+  };
+  openSheet();
+}
+
+/* ============================================================
+   右パネル：メモ / 日報
+============================================================ */
+const sideEl=document.getElementById("side");
+function autoGrow(t){ t.style.height="auto"; t.style.height=Math.max(32,t.scrollHeight+2)+"px"; }
+function renderSide(){
+  const key=dateKey(selDate);
+  const now=Date.now();
+  const dayEntries=state.entries.filter(e=>isSameDay(new Date(e.start),selDate)).sort((a,b)=>a.start-b.start);
+  let total=0; dayEntries.forEach(e=>total+=((e.end||now)-e.start)/60000);
+
+  sideEl.innerHTML=`
+    <div class="side-head"><h3>${(selDate.getMonth()+1)}/${selDate.getDate()} のメモ</h3><span class="side-total mono" id="sideTotal">${fmtDur(total)}</span></div>
+    <textarea class="day-memo" id="dayMemo" placeholder="今日の全体メモ(申し送り・TODO・電話予定など)"></textarea>
+    <div class="side-label">作業ごとのメモ</div>
+    <div id="logRows"></div>`;
+
+  const dm=document.getElementById("dayMemo");
+  dm.value=state.dayMemos[key]||"";
+  dm.addEventListener("input",()=>{ state.dayMemos[key]=dm.value; save(); });
+
+  const rows=document.getElementById("logRows");
+  if(dayEntries.length===0){
+    rows.innerHTML=`<div class="hint" style="padding:2px 6px">記録が入ると、ここに作業が時系列で並びます。各作業の右にメモを残せます(「資料お預かり」「次回◯◯確認」など)。</div>`;
+    return;
+  }
+  const run=runningEntry();
+  for(const e of dayEntries){
+    const c=getClient(e.clientId); const end=e.end||now; const dur=(end-e.start)/60000;
+    const isRun=e.end===null;
+    const row=document.createElement("div"); row.className="log-row"+(isRun?" running":"");
+    row.innerHTML=`
+      <div class="log-top">
+        <span class="log-dot" style="background:${c.color}"></span>
+        <span class="log-time mono">${fmtTime(e.start)}–${e.end?fmtTime(end):"…"}</span>
+        <span class="log-cli">${esc((c.code?c.code+" ":"")+c.name)}</span>
+        <span class="log-dur mono"${isRun?' id="runLogDur"':""}>${fmtDurShort(dur)}</span>
+      </div>
+      <div class="log-task">${esc(e.task||"(業務未設定)")}</div>`;
+    const memo=document.createElement("textarea");
+    memo.className="log-memo"; memo.placeholder="メモを追加…"; memo.value=e.memo||"";
+    memo.addEventListener("input",()=>{ e.memo=memo.value; save(); autoGrow(memo); });
+    row.querySelector(".log-top").onclick=()=>openEditEntry(e.id);
+    row.querySelector(".log-task").onclick=()=>openEditEntry(e.id);
+    row.appendChild(memo);
+    rows.appendChild(row);
+    autoGrow(memo);
+  }
+}
+
+/* ============================================================
+   集計
+============================================================ */
+const summaryEl=document.getElementById("summary");
+let summaryOpen=false;
+document.getElementById("sumBtn").onclick=()=>{ summaryOpen=!summaryOpen; renderSummary(); };
+function renderSummary(){
+  summaryEl.classList.toggle("open",summaryOpen);
+  if(!summaryOpen){ summaryEl.innerHTML=""; return; }
+  const dayEntries=state.entries.filter(e=>isSameDay(new Date(e.start),selDate));
+  const now=Date.now();
+  const byCli=new Map(), byTask=new Map(); let total=0;
+  for(const e of dayEntries){
+    const min=((e.end||now)-e.start)/60000; total+=min;
+    byCli.set(e.clientId,(byCli.get(e.clientId)||0)+min);
+    const key=e.task||"(未設定)"; byTask.set(key,(byTask.get(key)||0)+min);
+  }
+  const cliRows=[...byCli.entries()].sort((a,b)=>b[1]-a[1]);
+  const taskRows=[...byTask.entries()].sort((a,b)=>b[1]-a[1]);
+  const max=Math.max(1,...cliRows.map(r=>r[1]));
+  let html=`<div class="sum-head"><h3>${(selDate.getMonth()+1)}/${selDate.getDate()} の工数</h3><span class="sum-total mono">${fmtDur(total)}</span></div>`;
+  if(cliRows.length===0){ html+=`<div class="hint">記録がありません。</div>`; }
+  else{
+    html+=`<div class="sum-sub">顧問先別</div>`;
+    for(const [cid,min] of cliRows){ const c=getClient(cid);
+      html+=`<div class="sum-row"><span class="sum-dot" style="background:${c.color}"></span>
+        <span class="sum-name">${esc((c.code?c.code+" ":"")+c.name)}</span>
+        <span class="sum-bar-wrap"><span class="sum-bar" style="width:${(min/max*100).toFixed(1)}%;background:${c.color}"></span></span>
+        <span class="sum-time mono">${fmtDurShort(min)}</span></div>`; }
+    html+=`<div class="sum-sub">業務別</div>`;
+    const tmax=Math.max(1,...taskRows.map(r=>r[1]));
+    for(const [t,min] of taskRows){
+      html+=`<div class="sum-row"><span class="sum-dot" style="background:var(--rule-strong)"></span>
+        <span class="sum-name">${esc(t)}</span>
+        <span class="sum-bar-wrap"><span class="sum-bar" style="width:${(min/tmax*100).toFixed(1)}%;background:var(--figure)"></span></span>
+        <span class="sum-time mono">${fmtDurShort(min)}</span></div>`; }
+  }
+  summaryEl.innerHTML=html;
+}
+
+/* ============================================================
+   設定：顧問先 / 業務内容
+============================================================ */
+document.getElementById("setBtn").onclick=()=>{ renderSettings(); openSheet(); };
+function renderSettings(){
+  sheetHead.innerHTML=`<h2>設定</h2>`;
+  sheetBody.innerHTML=`
+    <div class="seg" id="segTop">
+      <button data-t="clients" class="on">顧問先</button>
+      <button data-t="bulk">一括登録</button>
+      <button data-t="tasks">業務</button>
+      <button data-t="data">データ</button>
+    </div>
+    <div id="setPane"></div>`;
+  const seg=document.getElementById("segTop");
+  seg.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    seg.querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on");
+    paneRender(b.dataset.t);
+  });
+  paneRender("clients");
+}
+function paneRender(t){
+  const pane=document.getElementById("setPane");
+  if(t==="clients"){
+    const clients=state.clients.filter(c=>c.kind==="client").sort((a,b)=>(a.code||"").localeCompare(b.code||"",undefined,{numeric:true}));
+    pane.innerHTML=`<button class="btn-fill" id="addCli" style="width:100%;margin:4px 0 12px">＋ 顧問先を追加</button><div id="cliRows"></div>`;
+    document.getElementById("addCli").onclick=()=>editClient(null);
+    const rows=document.getElementById("cliRows");
+    clients.forEach(c=>{
+      const r=document.createElement("div"); r.className="settings-cli";
+      r.innerHTML=`<span class="dot" style="background:${c.color}"></span><span class="code mono">${esc(c.code)}</span><span class="nm">${esc(c.name)}</span><button class="edit">編集</button>`;
+      r.querySelector(".edit").onclick=()=>editClient(c.id); rows.appendChild(r);
+    });
+    if(clients.length===0){ const h=document.createElement("div"); h.className="hint"; h.textContent="顧問先がまだありません。"; rows.appendChild(h); }
+  }
+  else if(t==="bulk"){
+    pane.innerHTML=`<div class="hint">1行につき「コード␣社名」。既存コードは社名を上書き、新規は色を自動割り当てします。</div>
+      <textarea class="bulk" id="bulkTxt" placeholder="407 Cyres&#10;412 三豊商事&#10;418 アライドカーボン"></textarea>
+      <div class="actions"><button class="btn-fill" id="bulkGo">まとめて登録</button></div>`;
+    document.getElementById("bulkGo").onclick=()=>{
+      const lines=document.getElementById("bulkTxt").value.split("\n").map(s=>s.trim()).filter(Boolean);
+      let added=0,updated=0;
+      for(const ln of lines){
+        const m=ln.match(/^(\S+)\s+(.+)$/); if(!m)continue;
+        const code=m[1], name=m[2].trim();
+        const ex=state.clients.find(c=>c.kind==="client"&&c.code===code);
+        if(ex){ ex.name=name; updated++; }
+        else{ state.clients.push({id:uid(),kind:"client",code,name,color:nextColor()}); added++; }
+      }
+      save(); toast(`追加${added}件・更新${updated}件`); paneRender("clients");
+      document.querySelector('#segTop button[data-t="clients"]').click();
+    };
+  }
+  else if(t==="tasks"){
+    pane.innerHTML=`<div class="seg" id="taskSeg" style="margin-top:2px">
+        <button data-k="client" class="on">顧問先の業務</button><button data-k="internal">社内の業務</button></div>
+      <div id="taskPane"></div>`;
+    const tseg=document.getElementById("taskSeg");
+    tseg.querySelectorAll("button").forEach(b=>b.onclick=()=>{ tseg.querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); taskPaneRender(b.dataset.k); });
+    taskPaneRender("client");
+  }
+  else{ // data
+    const nCli=state.clients.filter(c=>c.kind==="client").length;
+    const nEnt=state.entries.length;
+    pane.innerHTML=`
+      <div class="hint">この端末のデータをファイルに書き出し／読み込みします。PC⇄スマホでデータを移すときやバックアップに。<b>自動同期はされません。</b>読み込むと今のデータは置き換わります。</div>
+      <div style="margin:10px 4px;font-size:13px;color:var(--ink-soft)">現在：顧問先 <b>${nCli}</b> 件 ／ 記録 <b>${nEnt}</b> 件</div>
+      <button class="btn-fill" id="expBtn" style="width:100%;margin:4px 0 10px">バックアップを書き出す（JSON）</button>
+      <label class="btn-ghost" style="display:block;width:100%;text-align:center;box-sizing:border-box">バックアップを読み込む
+        <input type="file" id="impFile" accept="application/json,.json" style="display:none"></label>`;
+    document.getElementById("expBtn").onclick=exportData;
+    document.getElementById("impFile").onchange=(ev)=>{ const f=ev.target.files&&ev.target.files[0]; if(f) importData(f); };
+  }
+}
+function exportData(){
+  try{
+    const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download="time_tracker_backup_"+dateKey(new Date())+".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    toast("書き出しました");
+  }catch(e){ toast("書き出しに失敗しました"); }
+}
+function importData(file){
+  const r=new FileReader();
+  r.onload=()=>{
+    let s;
+    try{ s=JSON.parse(r.result); }catch(e){ toast("JSONを読めませんでした"); return; }
+    if(!s||!Array.isArray(s.clients)||!Array.isArray(s.entries)){ toast("形式が違うようです"); return; }
+    const nCli=s.clients.filter(c=>c.kind==="client").length;
+    if(!confirm(`このバックアップ(顧問先${nCli}件・記録${s.entries.length}件)で現在のデータを置き換えます。よろしいですか?`)) return;
+    if(!s.tasks) s.tasks={client:[...DEFAULT_TASKS.client],internal:[...DEFAULT_TASKS.internal]};
+    if(!s.dayMemos) s.dayMemos={};
+    state=s; save(); closeSheet(); renderAll(); toast("読み込みました");
+  };
+  r.readAsText(file);
+}
+function taskPaneRender(k){
+  const pane=document.getElementById("taskPane");
+  const list=state.tasks[k];
+  pane.innerHTML=`<div id="taskItems"></div>
+    <div class="add-inline"><input id="newTask" placeholder="業務を追加" autocomplete="off"><button id="newTaskGo">追加</button></div>`;
+  const items=document.getElementById("taskItems");
+  list.forEach((t,i)=>{
+    const row=document.createElement("div"); row.className="tasklist-item";
+    row.innerHTML=`<span class="nm">${esc(t)}</span><button class="x" aria-label="削除">×</button>`;
+    row.querySelector(".x").onclick=()=>{ list.splice(i,1); save(); taskPaneRender(k); };
+    items.appendChild(row);
+  });
+  const add=()=>{ const v=document.getElementById("newTask").value.trim(); if(!v)return; if(!list.includes(v))list.push(v); save(); taskPaneRender(k); };
+  document.getElementById("newTaskGo").onclick=add;
+  document.getElementById("newTask").addEventListener("keydown",e=>{ if(e.key==="Enter")add(); });
+}
+function nextColor(){
+  const used=state.clients.filter(c=>c.kind==="client").length;
+  return PALETTE[used%PALETTE.length];
+}
+function editClient(id){
+  const isNew=!id;
+  const c=isNew?{id:uid(),kind:"client",code:"",name:"",color:nextColor()}:getClient(id);
+  sheetHead.innerHTML=`<button class="back" id="backSet">‹</button><h2>${isNew?"顧問先を追加":"顧問先を編集"}</h2>`;
+  document.getElementById("backSet").onclick=()=>{ renderSettings(); };
+  sheetBody.innerHTML=`
+    <div class="row2">
+      <div class="field" style="flex:0 0 34%"><label>コード</label><input id="cCode" class="mono" value="${esc(c.code)}" placeholder="407"></div>
+      <div class="field"><label>社名</label><input id="cName" value="${esc(c.name)}" placeholder="株式会社◯◯"></div>
+    </div>
+    <div class="field"><label>色</label><div class="color-grid" id="cColors"></div></div>
+    <div class="actions">
+      <button class="btn-fill" id="cSave">保存</button>
+      ${isNew?"":`<button class="btn-danger" id="cDel">削除</button>`}
+    </div>`;
+  let chosen=c.color;
+  const cg=document.getElementById("cColors");
+  PALETTE.forEach(col=>{ const cell=document.createElement("button"); cell.className="color-cell"+(col===chosen?" sel":""); cell.style.background=col;
+    cell.onclick=()=>{ chosen=col; cg.querySelectorAll(".color-cell").forEach(x=>x.classList.remove("sel")); cell.classList.add("sel"); }; cg.appendChild(cell); });
+  document.getElementById("cSave").onclick=()=>{
+    c.code=document.getElementById("cCode").value.trim();
+    c.name=document.getElementById("cName").value.trim()||"(無名)";
+    c.color=chosen;
+    if(isNew) state.clients.push(c);
+    save(); renderSettings(); renderAll(); toast(isNew?"追加しました":"保存しました");
+  };
+  const del=document.getElementById("cDel");
+  if(del) del.onclick=()=>{
+    const used=state.entries.some(e=>e.clientId===c.id);
+    if(used && !confirm("この顧問先の記録が残っています。顧問先を削除しても過去の記録は残りますが、表示名が失われます。削除しますか?")) return;
+    state.clients=state.clients.filter(x=>x.id!==c.id); save(); renderSettings(); renderAll(); toast("削除しました");
+  };
+}
+
+/* ============================================================
+   共通
+============================================================ */
+let toastTimer=null;
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),1800); }
+
+function scrollToRelevant(){
+  // 今 or 最初の記録が見える位置へ
+  const dayStart=startOfDay(selDate).getTime();
+  const viewTop=dayStart+VIEW_START_H*3600000;
+  let targetMin;
+  const run=runningEntry();
+  if(run && isSameDay(new Date(run.start),selDate)) targetMin=(Date.now()-viewTop)/60000;
+  else{
+    const de=state.entries.filter(e=>isSameDay(new Date(e.start),selDate)).sort((a,b)=>a.start-b.start);
+    targetMin = de.length? (de[0].start-viewTop)/60000 : (9-VIEW_START_H)*60;
+  }
+  const y=Math.max(0,targetMin*PX_MIN-120);
+  scroll.scrollTo({top:y,behavior:"smooth"});
+}
+
+function renderAll(){ renderHeader(); renderTimeline(); renderSide(); renderDock(); renderSummary(); }
+
+/* 進行中の毎秒更新(メモ入力中もカーソルが飛ばないよう、右パネルは再描画せず必要箇所だけ更新) */
+setInterval(()=>{
+  const run=runningEntry();
+  updateElapsed();
+  if(!isSameDay(new Date(),selDate)) return;
+  renderTimeline();                              // タイムライン(入力欄なし)は再描画OK
+  if(summaryOpen) renderSummary();
+  // 右パネルはソフト更新のみ
+  const now=Date.now();
+  const dayEntries=state.entries.filter(e=>isSameDay(new Date(e.start),selDate));
+  let total=0; dayEntries.forEach(e=>total+=((e.end||now)-e.start)/60000);
+  const st=document.getElementById("sideTotal"); if(st) st.textContent=fmtDur(total);
+  if(run){ const rd=document.getElementById("runLogDur"); if(rd) rd.textContent=fmtDurShort((now-run.start)/60000); }
+},1000);
+
+/* 初期化 */
+renderAll();
+scrollToRelevant();
+</script>
+</body>
+</html>
