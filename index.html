@@ -329,6 +329,91 @@
   .banner .bn-x{width:30px;height:30px;border-radius:8px;color:var(--figure);font-size:18px;flex:0 0 auto}
   .banner .bn-x:hover{background:var(--paper)}
   @media(min-width:520px){.banner{left:auto;right:16px;width:340px}}
+
+  /* ---------- 日付ジャンプ（ヘッダのタップ領域） ---------- */
+  .date-jump{display:inline-flex;align-items:baseline;gap:2px;padding:3px 8px 3px 6px;border-radius:9px;color:inherit}
+  .date-jump:hover{background:var(--paper)}
+  .date-caret{width:15px;height:15px;color:var(--figure);align-self:center;margin-left:3px;flex:0 0 auto}
+  .date-jump:hover .date-caret{color:var(--ink)}
+
+  /* ---------- 月カレンダー（日付選択 / 記録ありドット） ---------- */
+  .cal{padding:2px 2px 4px}
+  .cal-nav{display:flex;align-items:center;gap:6px;margin:2px 2px 12px}
+  .cal-nav button{width:38px;height:38px;border-radius:10px;border:1px solid var(--rule);color:var(--ink-soft);display:grid;place-items:center;font-size:20px;background:var(--paper-2)}
+  .cal-nav button:hover{border-color:var(--figure);color:var(--ink)}
+  .cal-title{flex:1;text-align:center;font-family:var(--font-disp);font-size:19px;font-weight:600;letter-spacing:.02em}
+  .cal-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:5px}
+  .cal-dow span{text-align:center;font-size:11px;font-weight:700;color:var(--figure);padding:2px 0}
+  .cal-dow span.sun,.cal-num.sun{color:var(--shu)}
+  .cal-dow span.sat,.cal-num.sat{color:#3E6D9C}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .cal-cell{
+    position:relative;aspect-ratio:1/1;border-radius:10px;border:1px solid transparent;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    background:var(--paper);color:var(--ink);
+  }
+  .cal-cell:hover{border-color:var(--figure)}
+  .cal-cell.blank{background:transparent;border:none;pointer-events:none}
+  .cal-cell.today{border-color:var(--shu)}
+  .cal-cell.sel{background:var(--ink)}
+  .cal-cell.sel .cal-num{color:#fff}
+  .cal-num{font-family:var(--font-mono);font-size:15px;font-weight:600;line-height:1}
+  .cal-dot{width:6px;height:6px;border-radius:50%}
+  .cal-dot-empty{width:6px;height:6px}
+  .cal-cell.sel .cal-dot{box-shadow:0 0 0 1.5px rgba(255,255,255,.55)}
+  .cal-foot{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:14px 4px 2px;font-size:11.5px;color:var(--ink-soft)}
+  .cal-foot span{display:inline-flex;align-items:center;gap:5px}
+  .cal-foot .cal-foot-r{margin-left:auto;color:var(--figure);font-weight:600}
+
+  /* ---------- 集計パネル：月カレンダー俯瞰（濃淡 / 色帯） ---------- */
+  .ov{margin-top:2px}
+  .ov-nav{display:flex;align-items:center;gap:6px;margin:2px 0 8px}
+  .ov-nav button{width:32px;height:32px;border-radius:8px;border:1px solid var(--rule);color:var(--ink-soft);display:grid;place-items:center;font-size:18px;background:var(--paper-2)}
+  .ov-nav button:hover{border-color:var(--figure);color:var(--ink)}
+  .ov-title{flex:1;text-align:center;font-weight:700;font-size:13px}
+  .ov-metric{display:inline-flex;border:1px solid var(--rule-strong);border-radius:8px;overflow:hidden;margin-bottom:9px}
+  .ov-metric button{padding:5px 13px;font-size:11.5px;font-weight:700;color:var(--figure);background:var(--paper)}
+  .ov-metric button.on{background:var(--ink);color:#fff}
+  .ov-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:3px}
+  .ov-dow span{text-align:center;font-size:10px;font-weight:700;color:var(--figure)}
+  .ov-dow span.sun{color:var(--shu)}.ov-dow span.sat{color:#3E6D9C}
+  .ov-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .ov-cell{position:relative;height:40px;border-radius:7px;border:1px solid var(--rule);overflow:hidden;display:flex;align-items:flex-start;justify-content:flex-end;padding:3px 4px 0;background:var(--paper)}
+  .ov-cell.blank{border:none;background:transparent;pointer-events:none}
+  .ov-cell.today{outline:1.6px solid var(--shu);outline-offset:-1.6px}
+  .ov-cell.sel{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink) inset}
+  .ov-heat{position:absolute;inset:0;z-index:0}
+  .ov-band{position:absolute;left:0;right:0;bottom:0;height:11px;display:flex;z-index:1}
+  .ov-band i{display:block;height:100%}
+  .ov-num{position:relative;z-index:2;font-family:var(--font-mono);font-size:11px;font-weight:600;line-height:1;color:var(--ink)}
+  .ov-num.dim{color:var(--figure)}
+  .ov-num.on-dark{color:#fff}
+  .ov-foot{margin:10px 2px 2px;font-size:11.5px;color:var(--figure)}
+
+  /* ---------- 顧問先履歴（集計パネルの行タップで開く） ---------- */
+  .sum-row.clickable{cursor:pointer;border-radius:8px;margin-left:-6px;margin-right:-6px;padding:3px 6px}
+  .sum-row.clickable:hover{background:var(--paper)}
+  .ch-head{display:flex;align-items:center;gap:10px;margin:0 4px 10px}
+  .ch-dot{width:14px;height:14px;border-radius:4px;flex:0 0 auto}
+  .ch-name{font-size:15px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ch-total{font-family:var(--font-mono);font-weight:700;font-size:15px;color:var(--ink-soft)}
+  .ch-chips{display:flex;gap:6px;margin:0 4px 8px;flex-wrap:wrap}
+  .ch-chip{padding:7px 13px;border-radius:9px;border:1px solid var(--rule-strong);background:var(--paper);font-size:12px;font-weight:600;color:var(--ink-soft)}
+  .ch-chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .ch-views{display:inline-flex;border:1px solid var(--rule-strong);border-radius:9px;overflow:hidden;margin:0 4px 12px}
+  .ch-views button{padding:7px 16px;font-size:12px;font-weight:700;color:var(--figure);background:var(--paper)}
+  .ch-views button.on{background:var(--ink);color:#fff}
+  .ch-meta{font-size:11.5px;color:var(--ink-soft);margin:0 6px 8px}
+  .ch-day-h{display:flex;align-items:baseline;gap:8px;margin:13px 4px 4px;padding-bottom:3px;border-bottom:1px solid var(--rule-strong)}
+  .ch-day-h .d{font-family:var(--font-disp);font-size:14px;font-weight:700}
+  .ch-day-h .t{margin-left:auto;font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--ink-soft)}
+  .ch-row{display:flex;align-items:baseline;gap:8px;padding:7px 4px;border-bottom:1px solid var(--rule);cursor:pointer;border-radius:6px}
+  .ch-row:hover{background:var(--paper)}
+  .ch-row .dt{font-family:var(--font-mono);font-size:11.5px;color:var(--figure);flex:0 0 auto;width:44px}
+  .ch-row .tm{font-family:var(--font-mono);font-size:12px;color:var(--figure);flex:0 0 auto}
+  .ch-row .tk{font-size:13px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ch-row .du{font-family:var(--font-mono);font-size:12px;color:var(--ink-soft);flex:0 0 auto}
+  .ch-memo{font-size:11.5px;color:var(--ink-soft);margin:-3px 4px 4px 56px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
 </style>
 </head>
 <body>
@@ -339,10 +424,11 @@
     <button id="prevBtn" aria-label="前日">‹</button>
     <button id="nextBtn" aria-label="翌日">›</button>
   </div>
-  <div>
+  <button class="date-jump" id="dateJump" title="日付を選ぶ（記録のある日にドットが付きます）">
     <span class="date-h" id="dateH"></span>
     <span class="date-dow" id="dateDow"></span>
-  </div>
+    <svg class="date-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+  </button>
   <div class="spacer"></div>
   <button class="icon-btn" id="sumBtn" aria-label="集計" title="集計（顧問先別の時間）">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
@@ -581,6 +667,78 @@ function renderHeader(){
 document.getElementById("todayBtn").onclick=()=>{ selDate=startOfDay(new Date()); renderAll(); scrollToRelevant(); };
 document.getElementById("prevBtn").onclick=()=>{ selDate=new Date(selDate.getTime()-86400000); renderAll(); };
 document.getElementById("nextBtn").onclick=()=>{ selDate=new Date(selDate.getTime()+86400000); renderAll(); };
+
+/* ---- 日付ジャンプ：月カレンダー（記録ありドット付き） ---- */
+const CAL_SAVED_COLOR = "#5B8A72";   // 日報保存済み（落ち着いた緑）
+let pickerMonth = null;
+function dateKeyOf(y,mo,d){ return y+"-"+String(mo+1).padStart(2,"0")+"-"+String(d).padStart(2,"0"); }
+function dayStatsIndex(){
+  // "YYYY-MM-DD" -> {count, min}  … ①のドット判定用（③の俯瞰ビューでも流用予定）
+  const idx=new Map(); const now=Date.now();
+  for(const e of state.entries){
+    const k=dateKey(new Date(e.start));
+    let o=idx.get(k); if(!o){ o={count:0,min:0}; idx.set(k,o); }
+    o.count++; o.min+=((e.end||now)-e.start)/60000;
+  }
+  return idx;
+}
+function openDatePicker(){
+  pickerMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1);
+  drawDatePicker(); openSheet();
+}
+function drawDatePicker(){
+  const idx=dayStatsIndex();
+  const y=pickerMonth.getFullYear(), mo=pickerMonth.getMonth();
+  const lead=new Date(y,mo,1).getDay();          // 先頭の空白数（0=日）
+  const dim=new Date(y,mo+1,0).getDate();        // 月末日
+  const todayKey=dateKey(new Date());
+  const selKey=dateKey(selDate);
+  let workDays=0; for(let d=1;d<=dim;d++){ if(idx.has(dateKeyOf(y,mo,d))) workDays++; }
+
+  const dowCells=["日","月","火","水","木","金","土"]
+    .map((w,i)=>`<span class="${i===0?"sun":i===6?"sat":""}">${w}</span>`).join("");
+  let cells="";
+  for(let i=0;i<lead;i++) cells+=`<div class="cal-cell blank"></div>`;
+  for(let d=1;d<=dim;d++){
+    const k=dateKeyOf(y,mo,d);
+    const has=idx.has(k);
+    const saved=!!(state.savedDays&&state.savedDays[k]);
+    const dow=new Date(y,mo,d).getDay();
+    const cls=["cal-cell"]; if(k===selKey)cls.push("sel"); if(k===todayKey)cls.push("today");
+    const numCls=dow===0?"sun":dow===6?"sat":"";
+    const dot=has
+      ? `<span class="cal-dot" style="background:${saved?CAL_SAVED_COLOR:"var(--shu)"}"></span>`
+      : `<span class="cal-dot-empty"></span>`;
+    cells+=`<button class="${cls.join(" ")}" data-k="${k}"><span class="cal-num ${numCls}">${d}</span>${dot}</button>`;
+  }
+  sheetHead.innerHTML=`<h2>日付を選ぶ</h2>`;
+  sheetBody.innerHTML=`
+    <div class="cal">
+      <div class="cal-nav">
+        <button id="calPrev" aria-label="前の月">‹</button>
+        <div class="cal-title">${y}年${mo+1}月</div>
+        <button id="calNext" aria-label="次の月">›</button>
+      </div>
+      <div class="cal-dow">${dowCells}</div>
+      <div class="cal-grid">${cells}</div>
+      <div class="cal-foot">
+        <span><span class="cal-dot" style="background:var(--shu)"></span>記録あり</span>
+        <span><span class="cal-dot" style="background:${CAL_SAVED_COLOR}"></span>日報保存済み</span>
+        <span class="cal-foot-r">この月 稼働 ${workDays}日</span>
+      </div>
+      <div class="actions" style="margin-top:8px">
+        <button class="btn-ghost" id="calToday" style="flex:1">今日へ</button>
+      </div>
+    </div>`;
+  document.getElementById("calPrev").onclick=()=>{ pickerMonth=new Date(y,mo-1,1); drawDatePicker(); };
+  document.getElementById("calNext").onclick=()=>{ pickerMonth=new Date(y,mo+1,1); drawDatePicker(); };
+  document.getElementById("calToday").onclick=()=>{ selDate=startOfDay(new Date()); closeSheet(); renderAll(); scrollToRelevant(); };
+  sheetBody.querySelectorAll(".cal-cell[data-k]").forEach(b=>{
+    b.onclick=()=>{ const [yy,mm,dd]=b.dataset.k.split("-").map(Number);
+      selDate=new Date(yy,mm-1,dd); closeSheet(); renderAll(); scrollToRelevant(); };
+  });
+}
+document.getElementById("dateJump").onclick=openDatePicker;
 
 /* ============================================================
    下部ドック
@@ -1246,16 +1404,36 @@ document.getElementById("expBtnH").onclick=openExport;
 ============================================================ */
 const summaryEl=document.getElementById("summary");
 let summaryOpen=false;
-let summaryMode="day";   // "day" | "month"
+let summaryMode="day";        // "day" | "month" | "cal"
+let overviewMetric="min";     // 俯瞰の濃さ基準："min"(工数) | "count"(件数) | "client"(顧問先=色帯)
 document.getElementById("sumBtn").onclick=()=>{ summaryOpen=!summaryOpen; renderSummary(); };
+
+function monthCellData(year,month){
+  // day番号 -> {min,count,byClient:Map(clientId->min)}  … 俯瞰ビュー用
+  const now=Date.now(); const m=new Map();
+  for(const e of state.entries){
+    const d=new Date(e.start);
+    if(d.getFullYear()!==year||d.getMonth()!==month) continue;
+    const day=d.getDate();
+    let o=m.get(day); if(!o){ o={min:0,count:0,byClient:new Map()}; m.set(day,o); }
+    const mn=((e.end||now)-e.start)/60000;
+    o.min+=mn; o.count++;
+    o.byClient.set(e.clientId,(o.byClient.get(e.clientId)||0)+mn);
+  }
+  return m;
+}
+function wireToggle(){
+  summaryEl.querySelectorAll(".sum-toggle button").forEach(b=>b.onclick=()=>{ summaryMode=b.dataset.m; renderSummary(); });
+}
+
 function renderSummary(){
   summaryEl.classList.toggle("open",summaryOpen);
   if(!summaryOpen){ summaryEl.innerHTML=""; return; }
   const now=Date.now();
   const isMonth = summaryMode==="month";
-  const inScope = isMonth
-    ? (e)=>{ const d=new Date(e.start); return d.getFullYear()===selDate.getFullYear() && d.getMonth()===selDate.getMonth(); }
-    : (e)=> isSameDay(new Date(e.start),selDate);
+  const isCal   = summaryMode==="cal";
+  const monthScope=(e)=>{ const d=new Date(e.start); return d.getFullYear()===selDate.getFullYear() && d.getMonth()===selDate.getMonth(); };
+  const inScope = (isMonth||isCal) ? monthScope : (e)=> isSameDay(new Date(e.start),selDate);
   const scoped=state.entries.filter(inScope);
   const byCli=new Map(), byTask=new Map(); let total=0; const daySet=new Set();
   for(const e of scoped){
@@ -1268,22 +1446,31 @@ function renderSummary(){
   const taskRows=[...byTask.entries()].sort((a,b)=>b[1]-a[1]);
   const max=Math.max(1,...cliRows.map(r=>r[1]));
 
-  const title = isMonth
+  const title = (isMonth||isCal)
     ? `${selDate.getFullYear()}年${selDate.getMonth()+1}月 の工数`
     : `${(selDate.getMonth()+1)}/${selDate.getDate()} の工数`;
   let html=`<div class="sum-head"><h3>${title}</h3><span class="sum-total mono">${fmtDur(total)}</span></div>`;
   html+=`<div class="sum-toggle">
-      <button data-m="day" class="${!isMonth?"on":""}">日</button>
+      <button data-m="day" class="${summaryMode==="day"?"on":""}">日</button>
       <button data-m="month" class="${isMonth?"on":""}">月</button>
+      <button data-m="cal" class="${isCal?"on":""}">暦</button>
     </div>`;
+
+  if(isCal){
+    html+=drawOverviewHTML();
+    summaryEl.innerHTML=html;
+    wireToggle(); wireOverview();
+    return;
+  }
+
   if(isMonth && cliRows.length){
     html+=`<div class="sum-meta">稼働 ${daySet.size}日 ・ 顧問先 ${cliRows.length}件<button class="sum-copy" id="sumCopy">コピー</button></div>`;
   }
   if(cliRows.length===0){ html+=`<div class="hint">記録がありません。</div>`; }
   else{
-    html+=`<div class="sum-sub">顧問先別</div>`;
+    html+=`<div class="sum-sub">顧問先別 <span style="font-weight:400">（タップで履歴）</span></div>`;
     for(const [cid,min] of cliRows){ const c=getClient(cid);
-      html+=`<div class="sum-row"><span class="sum-dot" style="background:${c.color}"></span>
+      html+=`<div class="sum-row clickable" data-cid="${cid}"><span class="sum-dot" style="background:${c.color}"></span>
         <span class="sum-name">${esc((c.code?c.code+" ":"")+c.name)}</span>
         <span class="sum-bar-wrap"><span class="sum-bar" style="width:${(min/max*100).toFixed(1)}%;background:${c.color}"></span></span>
         <span class="sum-time mono">${fmtDurShort(min)}</span></div>`; }
@@ -1296,9 +1483,75 @@ function renderSummary(){
         <span class="sum-time mono">${fmtDurShort(min)}</span></div>`; }
   }
   summaryEl.innerHTML=html;
-  summaryEl.querySelectorAll(".sum-toggle button").forEach(b=>b.onclick=()=>{ summaryMode=b.dataset.m; renderSummary(); });
+  wireToggle();
+  summaryEl.querySelectorAll(".sum-row.clickable").forEach(el=>el.onclick=()=>openClientHistory(el.dataset.cid));
   const cp=document.getElementById("sumCopy");
   if(cp) cp.onclick=()=>copyText(buildMonthSummaryText(selDate,cliRows), null);
+}
+
+/* ---- ③ 月カレンダー俯瞰（集計パネル内） ---- */
+function drawOverviewHTML(){
+  const y=selDate.getFullYear(), mo=selDate.getMonth();
+  const data=monthCellData(y,mo);
+  const lead=new Date(y,mo,1).getDay();
+  const dim=new Date(y,mo+1,0).getDate();
+  const todayKey=dateKey(new Date());
+  const selKey=dateKey(selDate);
+  const metric=overviewMetric;
+  let maxMin=0,maxCnt=0;
+  data.forEach(o=>{ if(o.min>maxMin)maxMin=o.min; if(o.count>maxCnt)maxCnt=o.count; });
+
+  const dowCells=["日","月","火","水","木","金","土"]
+    .map((w,i)=>`<span class="${i===0?"sun":i===6?"sat":""}">${w}</span>`).join("");
+  let cells="";
+  for(let i=0;i<lead;i++) cells+=`<div class="ov-cell blank"></div>`;
+  for(let d=1;d<=dim;d++){
+    const k=dateKeyOf(y,mo,d);
+    const o=data.get(d);
+    const cls=["ov-cell"]; if(k===selKey)cls.push("sel"); if(k===todayKey)cls.push("today");
+    let layer="", numDark=false;
+    if(o){
+      if(metric==="client"){
+        const segs=[...o.byClient.entries()].sort((a,b)=>b[1]-a[1]);
+        const band=segs.map(([cid,mn])=>`<i style="width:${(mn/o.min*100).toFixed(2)}%;background:${getClient(cid).color}"></i>`).join("");
+        layer=`<span class="ov-band">${band}</span>`;
+      }else{
+        const v = metric==="count"? o.count : o.min;
+        const mx= metric==="count"? maxCnt : maxMin;
+        const a = mx>0 ? 0.12+0.66*(v/mx) : 0;
+        layer=`<span class="ov-heat" style="background:rgba(30,42,56,${a.toFixed(3)})"></span>`;
+        if(a>=0.46) numDark=true;
+      }
+    }
+    const numCls = numDark ? "on-dark" : (o ? "" : "dim");
+    const label = o ? `${fmtDur(o.min)}・${o.count}件` : "記録なし";
+    cells+=`<button class="${cls.join(" ")}" data-k="${k}" title="${mo+1}/${d} ${label}">${layer}<span class="ov-num ${numCls}">${d}</span></button>`;
+  }
+  const metricBtns=[["min","工数"],["count","件数"],["client","顧問先"]]
+    .map(([m,l])=>`<button data-om="${m}" class="${metric===m?"on":""}">${l}</button>`).join("");
+  const foot = metric==="client" ? "各日の色帯 ＝ 顧問先ごとの時間の割合"
+    : (metric==="count" ? "濃いほど記録件数が多い日" : "濃いほど工数の多い日");
+  return `<div class="ov">
+      <div class="ov-nav">
+        <button id="ovPrev" aria-label="前の月">‹</button>
+        <div class="ov-title">${y}年${mo+1}月</div>
+        <button id="ovNext" aria-label="次の月">›</button>
+      </div>
+      <div class="ov-metric">${metricBtns}</div>
+      <div class="ov-dow">${dowCells}</div>
+      <div class="ov-grid">${cells}</div>
+      <div class="ov-foot">${foot}</div>
+    </div>`;
+}
+function wireOverview(){
+  const prev=document.getElementById("ovPrev"), next=document.getElementById("ovNext");
+  if(prev) prev.onclick=()=>{ selDate=new Date(selDate.getFullYear(),selDate.getMonth()-1,1); renderAll(); };
+  if(next) next.onclick=()=>{ selDate=new Date(selDate.getFullYear(),selDate.getMonth()+1,1); renderAll(); };
+  summaryEl.querySelectorAll(".ov-metric button").forEach(b=>b.onclick=()=>{ overviewMetric=b.dataset.om; renderSummary(); });
+  summaryEl.querySelectorAll(".ov-cell[data-k]").forEach(b=>b.onclick=()=>{
+    const [yy,mm,dd]=b.dataset.k.split("-").map(Number);
+    selDate=new Date(yy,mm-1,dd); renderAll(); scrollToRelevant();
+  });
 }
 function buildMonthSummaryText(d, cliRows){
   const L=[`${d.getFullYear()}年${d.getMonth()+1}月 工数（顧問先別）`];
@@ -1307,6 +1560,109 @@ function buildMonthSummaryText(d, cliRows){
     L.push(`${(c.code?c.code+" ":"")+c.name} … ${fmtDur(min)}`); }
   L.push(`合計 … ${fmtDur(total)}`);
   return L.join("\n");
+}
+
+/* ============================================================
+   ④ 顧問先で絞って履歴（集計パネルの行タップで開く）
+============================================================ */
+let chPeriod="month";   // "month" | "prev" | "3m" | "all"
+let chView="list";      // "list"(一覧) | "day"(日別) | "sum"(集計)
+function chRange(){
+  const t=startOfDay(new Date());
+  const y=t.getFullYear(), mo=t.getMonth();
+  if(chPeriod==="month") return {s:new Date(y,mo,1).getTime(), e:new Date(y,mo+1,1).getTime(), label:`${mo+1}月`};
+  if(chPeriod==="prev")  return {s:new Date(y,mo-1,1).getTime(), e:new Date(y,mo,1).getTime(), label:`${new Date(y,mo-1,1).getMonth()+1}月`};
+  if(chPeriod==="3m")    return {s:new Date(y,mo-2,1).getTime(), e:new Date(y,mo+1,1).getTime(), label:"直近3ヶ月"};
+  return {s:-Infinity, e:Infinity, label:"全期間"};
+}
+function openClientHistory(clientId){
+  const c=getClient(clientId);
+  drawClientHistory(c); openSheet();
+}
+function drawClientHistory(c){
+  const now=Date.now();
+  const r=chRange();
+  const rows=state.entries
+    .filter(e=>e.clientId===c.id && e.start>=r.s && e.start<r.e)
+    .sort((a,b)=>a.start-b.start);
+  let total=0; const daySet=new Set(); const byTask=new Map();
+  for(const e of rows){
+    const m=((e.end||now)-e.start)/60000; total+=m;
+    daySet.add(dateKey(new Date(e.start)));
+    const k=e.task||"(未設定)"; byTask.set(k,(byTask.get(k)||0)+m);
+  }
+
+  sheetHead.innerHTML=`<button class="back" id="chBack">‹</button><h2>顧問先の履歴</h2>`;
+  const chips=[["month","今月"],["prev","先月"],["3m","3ヶ月"],["all","全期間"]]
+    .map(([k,l])=>`<button class="ch-chip${chPeriod===k?" on":""}" data-p="${k}">${l}</button>`).join("");
+  const views=[["list","一覧"],["day","日別"],["sum","集計"]]
+    .map(([k,l])=>`<button data-v="${k}" class="${chView===k?"on":""}">${l}</button>`).join("");
+
+  let body="";
+  if(rows.length===0){
+    body=`<div class="hint" style="margin:14px 6px">${r.label}の記録はありません。</div>`;
+  }
+  else if(chView==="sum"){
+    body=`<div class="ch-meta">${r.label} ・ 稼働 ${daySet.size}日 ・ ${rows.length}件<button class="sum-copy" id="chCopy">コピー</button></div>`;
+    const trs=[...byTask.entries()].sort((a,b)=>b[1]-a[1]);
+    const tmax=Math.max(1,...trs.map(x=>x[1]));
+    body+=`<div class="sum-sub" style="margin:6px 6px 4px">業務別</div>`;
+    for(const [t,min] of trs){
+      body+=`<div class="sum-row"><span class="sum-dot" style="background:${c.color}"></span>
+        <span class="sum-name">${esc(t)}</span>
+        <span class="sum-bar-wrap"><span class="sum-bar" style="width:${(min/tmax*100).toFixed(1)}%;background:${c.color}"></span></span>
+        <span class="sum-time mono">${fmtDurShort(min)}</span></div>`;
+    }
+  }
+  else if(chView==="day"){
+    const byDay=new Map();
+    for(const e of rows){ const k=dateKey(new Date(e.start)); if(!byDay.has(k))byDay.set(k,[]); byDay.get(k).push(e); }
+    for(const [k,list] of byDay){
+      let dTotal=0; list.forEach(e=>dTotal+=((e.end||now)-e.start)/60000);
+      const d=dayFromKey(k);
+      body+=`<div class="ch-day-h"><span class="d">${d.getMonth()+1}/${d.getDate()}（${DOW[d.getDay()]}）</span><span class="t">${fmtDur(dTotal)}</span></div>`;
+      for(const e of list) body+=chRowHTML(e,now,false);
+    }
+  }
+  else{ // list
+    for(const e of rows) body+=chRowHTML(e,now,true);
+  }
+
+  sheetBody.innerHTML=`
+    <div class="ch-head">
+      <span class="ch-dot" style="background:${c.color}"></span>
+      <span class="ch-name">${esc((c.code?c.code+" ":"")+c.name)}</span>
+      <span class="ch-total">${fmtDur(total)}</span>
+    </div>
+    <div class="ch-chips">${chips}</div>
+    <div class="ch-views">${views}</div>
+    <div id="chBody">${body}</div>`;
+
+  document.getElementById("chBack").onclick=closeSheet;
+  sheetBody.querySelectorAll(".ch-chip").forEach(b=>b.onclick=()=>{ chPeriod=b.dataset.p; drawClientHistory(c); });
+  sheetBody.querySelectorAll(".ch-views button").forEach(b=>b.onclick=()=>{ chView=b.dataset.v; drawClientHistory(c); });
+  sheetBody.querySelectorAll(".ch-row[data-id]").forEach(el=>el.onclick=()=>openEditEntry(el.dataset.id));
+  const cp=document.getElementById("chCopy");
+  if(cp) cp.onclick=()=>{
+    const trs=[...byTask.entries()].sort((a,b)=>b[1]-a[1]);
+    const L=[`${(c.code?c.code+" ":"")+c.name} 工数（${r.label}）`];
+    trs.forEach(([t,m])=>L.push(`${t} … ${fmtDur(m)}`));
+    L.push(`合計 … ${fmtDur(total)}（稼働${daySet.size}日・${rows.length}件）`);
+    copyText(L.join("\n"),null);
+  };
+}
+function chRowHTML(e,now,withDate){
+  const end=e.end||now; const dur=(end-e.start)/60000;
+  const d=new Date(e.start);
+  const dt=withDate?`<span class="dt">${d.getMonth()+1}/${d.getDate()}</span>`:`<span class="dt" style="width:0"></span>`;
+  let html=`<div class="ch-row" data-id="${e.id}">
+      ${dt}<span class="tm">${fmtTime(e.start)}–${e.end?fmtTime(end):"…"}</span>
+      <span class="tk">${esc(e.task||"(業務未設定)")}</span>
+      <span class="du">${fmtDurShort(dur)}</span>
+    </div>`;
+  const memo=(e.memo||"").trim();
+  if(memo) html+=`<div class="ch-memo">${esc(memo)}</div>`;
+  return html;
 }
 
 /* ============================================================
