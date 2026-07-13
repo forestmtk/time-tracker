@@ -270,6 +270,60 @@
     z-index:60;opacity:0;transition:all .2s;pointer-events:none;box-shadow:var(--shadow);
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ---------- カスタム時刻ピッカー（タップで即セット） ---------- */
+  .tf-wrap{position:relative}
+  .timefield{
+    width:100%;padding:12px;border:1px solid var(--rule-strong);border-radius:10px;
+    background:var(--paper);text-align:left;font-family:var(--font-mono);
+    font-size:17px;font-weight:700;color:var(--ink);letter-spacing:.06em;
+  }
+  .timefield.empty{color:var(--figure);font-weight:600}
+  .timefield.open{border-color:var(--shu);background:var(--paper-2);box-shadow:0 0 0 3px var(--shu-soft)}
+  .timefield.disabled{opacity:.5}
+  .tpick{
+    position:absolute;top:calc(100% + 6px);left:0;z-index:40;
+    width:248px;max-width:calc(100vw - 40px);
+    border:1px solid var(--rule-strong);border-radius:12px;
+    background:var(--paper-2);padding:9px;box-shadow:var(--shadow);
+  }
+  .tf-wrap.tf-right .tpick{left:auto;right:0}
+  .tp-lab{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--figure);font-weight:600;margin:1px 2px 8px}
+  .tp-back{font-size:19px;color:var(--ink-soft);padding:0 6px 2px;line-height:1;margin-right:2px}
+  .tp-back:hover{color:var(--ink)}
+  .tp-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+  .tp-cell{
+    padding:11px 0;border-radius:8px;border:1px solid var(--rule);
+    background:var(--paper);font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--ink);
+  }
+  .tp-cell:hover{border-color:var(--figure)}
+  .tp-cell.sel{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .tp-cell:active{transform:scale(.94)}
+
+  /* ---------- 日報の書き出し ---------- */
+  .export-pre{
+    width:100%;min-height:280px;max-height:48vh;resize:vertical;
+    padding:12px 13px;border:1px solid var(--rule-strong);border-radius:11px;
+    background:var(--paper);color:var(--ink);outline:none;
+    font-family:var(--font-mono);font-size:12.5px;line-height:1.7;white-space:pre;overflow:auto;
+  }
+  .export-pre:focus{border-color:var(--figure)}
+  .fs-row{display:flex;align-items:center;gap:8px;margin:10px 4px 2px;font-size:12px;color:var(--figure)}
+  .fs-row b{color:var(--ink-soft);font-weight:600}
+  .fs-row .lk{margin-left:auto;color:var(--figure);text-decoration:underline;padding:4px 2px}
+  .fs-row .lk:hover{color:var(--ink)}
+
+  /* ---------- 自動保存バナー ---------- */
+  .banner{
+    position:fixed;left:12px;right:12px;bottom:calc(94px + var(--safe-b));z-index:66;
+    display:flex;align-items:center;gap:10px;padding:11px 10px 11px 14px;
+    background:var(--paper-2);border:1px solid var(--rule-strong);border-radius:12px;box-shadow:var(--shadow);
+  }
+  .banner .bn-txt{flex:1;font-size:13px;color:var(--ink);font-weight:600;line-height:1.4}
+  .banner .bn-go{padding:9px 15px;border-radius:9px;background:var(--ink);color:#fff;font-weight:700;font-size:13px;flex:0 0 auto}
+  .banner .bn-x{width:30px;height:30px;border-radius:8px;color:var(--figure);font-size:18px;flex:0 0 auto}
+  .banner .bn-x:hover{background:var(--paper)}
+  @media(min-width:520px){.banner{left:auto;right:16px;width:340px}}
 </style>
 </head>
 <body>
@@ -287,6 +341,9 @@
   <div class="spacer"></div>
   <button class="icon-btn" id="sumBtn" aria-label="集計">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+  </button>
+  <button class="icon-btn" id="expBtnH" aria-label="日報を書き出す">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9l4 4v3"/><path d="M14 3v4h4"/><path d="M15 15h6M18 12l3 3-3 3"/></svg>
   </button>
   <button class="icon-btn" id="setBtn" aria-label="設定">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -315,6 +372,12 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div class="banner" id="banner" hidden>
+  <span class="bn-txt" id="bnTxt"></span>
+  <button class="bn-go" id="bnGo">保存</button>
+  <button class="bn-x" id="bnX" aria-label="閉じる">×</button>
+</div>
 
 <script>
 "use strict";
@@ -357,7 +420,8 @@ function defaultState(){
     ],
     tasks:{client:[...DEFAULT_TASKS.client], internal:[...DEFAULT_TASKS.internal]},
     entries:[], // {id, clientId, task, start:ms, end:ms|null, memo:""}
-    dayMemos:{} // {"YYYY-MM-DD": text}
+    dayMemos:{}, // {"YYYY-MM-DD": text}
+    savedDays:{} // {"YYYY-MM-DD": true} … Obsidianへ保存済みの印
   };
 }
 function load(){
@@ -368,11 +432,14 @@ function load(){
     if(!s||!s.clients||!s.entries) return defaultState();
     if(!s.tasks) s.tasks={client:[...DEFAULT_TASKS.client],internal:[...DEFAULT_TASKS.internal]};
     if(!s.dayMemos) s.dayMemos={};
+    if(!s.savedDays) s.savedDays={};
     return s;
   }catch(e){ return defaultState(); }
 }
 function save(){ try{ localStorage.setItem(STORE_KEY,JSON.stringify(state)); }catch(e){} }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+/* 記録を触った日は「保存済み」印を外し、翌起動で自動保存し直す */
+function markDayDirty(ms){ const k=dateKey(new Date(ms)); if(state.savedDays&&state.savedDays[k]) delete state.savedDays[k]; }
 
 /* ---------- 日付ユーティリティ ---------- */
 let selDate = startOfDay(new Date());
@@ -581,6 +648,111 @@ function openSheet(){ scrim.classList.add("open"); sheet.classList.add("open"); 
 function closeSheet(){ scrim.classList.remove("open"); sheet.classList.remove("open"); }
 scrim.onclick=closeSheet;
 
+/* ============================================================
+   カスタム時刻ピッカー（タップ→時→分の2タップで即セット）
+============================================================ */
+let tpActiveWrap=null;
+function tfWrap(id,value,align){
+  const v=value||"";
+  const rc=align==="right"?" tf-right":"";
+  return `<div class="tf-wrap${rc}"><button type="button" class="timefield${v?"":" empty"}" id="${id}" data-val="${v}">${v||"--:--"}</button><div class="tpick" hidden></div></div>`;
+}
+function tfDisabled(text){
+  return `<div class="tf-wrap"><button type="button" class="timefield disabled" disabled>${esc(text||"--:--")}</button></div>`;
+}
+function getTF(id){ const el=document.getElementById(id); return el?(el.dataset.val||""):""; }
+function initTF(root){
+  tpActiveWrap=null;
+  root.querySelectorAll(".tf-wrap .timefield:not(.disabled)").forEach(field=>{
+    field.onclick=(ev)=>{ ev.stopPropagation(); toggleTP(field); };
+  });
+}
+function closeTP(){
+  if(!tpActiveWrap) return;
+  const p=tpActiveWrap.querySelector(".tpick"); const f=tpActiveWrap.querySelector(".timefield");
+  if(p){ p.hidden=true; p.innerHTML=""; } if(f) f.classList.remove("open");
+  tpActiveWrap=null;
+}
+function toggleTP(field){
+  const wrap=field.closest(".tf-wrap");
+  if(tpActiveWrap===wrap){ closeTP(); return; }
+  closeTP();
+  tpActiveWrap=wrap; field.classList.add("open");
+  const parts=(field.dataset.val||"").split(":");
+  const h=parts[0]!==""&&parts[0]!==undefined?Number(parts[0]):null;
+  const m=parts[1]!==""&&parts[1]!==undefined?Number(parts[1]):null;
+  renderTPHours(field,h,m);
+}
+function renderTPHours(field,selH,selM){
+  const p=field.closest(".tf-wrap").querySelector(".tpick");
+  let cells="";
+  for(let h=0;h<24;h++) cells+=`<button type="button" class="tp-cell${h===selH?" sel":""}" data-h="${h}">${String(h).padStart(2,"0")}</button>`;
+  p.innerHTML=`<div class="tp-lab">時を選ぶ</div><div class="tp-grid">${cells}</div>`;
+  p.hidden=false;
+  p.querySelectorAll(".tp-cell").forEach(c=>c.onclick=(ev)=>{ ev.stopPropagation(); renderTPMins(field,Number(c.dataset.h),selM); });
+}
+function renderTPMins(field,h,selM){
+  const p=field.closest(".tf-wrap").querySelector(".tpick");
+  let cells="";
+  for(let m=0;m<60;m+=5) cells+=`<button type="button" class="tp-cell${m===selM?" sel":""}" data-m="${m}">${String(m).padStart(2,"0")}</button>`;
+  p.innerHTML=`<div class="tp-lab"><button type="button" class="tp-back" id="tpBack">‹</button>${String(h).padStart(2,"0")}時 → 分を選ぶ</div><div class="tp-grid">${cells}</div>`;
+  p.querySelector("#tpBack").onclick=(ev)=>{ ev.stopPropagation(); renderTPHours(field,h,selM); };
+  p.querySelectorAll(".tp-cell").forEach(c=>c.onclick=(ev)=>{ ev.stopPropagation();
+    const val=String(h).padStart(2,"0")+":"+String(Number(c.dataset.m)).padStart(2,"0");
+    field.dataset.val=val; field.textContent=val; field.classList.remove("empty");
+    closeTP();
+  });
+}
+document.addEventListener("click",()=>{ if(tpActiveWrap) closeTP(); });
+
+/* ============================================================
+   締め忘れの検知（前日以前の計測が止まっていない場合）
+============================================================ */
+function checkStaleRunning(){
+  const run=runningEntry();
+  if(!run) return false;
+  if(isSameDay(new Date(run.start),new Date())) return false;   // 今日開始のものはそのまま
+  openStaleFix(run);
+  return true;   // 締め忘れあり
+}
+function openStaleFix(run){
+  const cli=getClient(run.clientId);
+  const sd=new Date(run.start);
+  const startLabel=(sd.getMonth()+1)+"/"+sd.getDate()+" "+fmtTime(run.start);
+  // 既定の終了：開始日の18:00。開始が18:00以降なら開始+30分(5分丸め)
+  let def=new Date(sd.getFullYear(),sd.getMonth(),sd.getDate(),18,0,0,0);
+  if(def.getTime()<=run.start){ let d2=new Date(run.start+30*60000); d2.setMinutes(Math.round(d2.getMinutes()/5)*5,0,0); def=d2; }
+  sheetHead.innerHTML=`<h2>締め忘れの記録</h2>`;
+  sheetBody.innerHTML=`
+    <div class="hint" style="font-size:13px;line-height:1.7;color:var(--ink-soft);margin:4px 4px 10px">
+      前回の計測が「停止」されないまま残っています。<br>
+      <b style="color:var(--ink)">${esc((cli.code?cli.code+" ":"")+cli.name)}</b> ／ 開始 <b class="mono" style="color:var(--ink)">${startLabel}</b><br>
+      終了時刻を入れて締めましょう。
+    </div>
+    <div class="field"><label>終了（${sd.getMonth()+1}/${sd.getDate()}）</label>${tfWrap("stEnd",fmtTime(def.getTime()))}</div>
+    <div class="actions">
+      <button class="btn-fill" id="stFix">この時刻で締める</button>
+      <button class="btn-ghost" id="stKeep">そのまま続ける</button>
+    </div>
+    <div class="actions" style="margin-top:8px">
+      <button class="btn-danger" id="stDel" style="flex:1">この記録を削除</button>
+    </div>`;
+  initTF(sheetBody);
+  document.getElementById("stFix").onclick=()=>{
+    const v=getTF("stEnd"); if(!v){ toast("終了時刻を入れてください"); return; }
+    const [eh,em]=v.split(":").map(Number);
+    let ed=new Date(sd.getFullYear(),sd.getMonth(),sd.getDate(),eh,em,0,0);
+    if(ed.getTime()<=run.start) ed=new Date(ed.getTime()+86400000);   // 日跨ぎ
+    run.end=ed.getTime(); markDayDirty(run.start); save(); closeSheet(); renderAll(); toast("締めました");
+  };
+  document.getElementById("stKeep").onclick=()=>{ closeSheet(); };
+  document.getElementById("stDel").onclick=()=>{
+    if(!confirm("この計測記録を削除します。よろしいですか?")) return;
+    state.entries=state.entries.filter(x=>x.id!==run.id); save(); closeSheet(); renderAll(); toast("削除しました");
+  };
+  openSheet();
+}
+
 /* ---- 開始フロー：顧問先を選ぶ → 業務内容を選ぶ ---- */
 function openStartFlow(){
   renderClientPicker();
@@ -689,8 +861,8 @@ function openCreateEntry(startMs,endMs){
     <div class="field"><label>顧問先</label><select id="nwCli">${cliOpts}</select></div>
     <div class="field"><label>業務内容</label><input id="nwTask" list="nwDL" placeholder="訪問・打合せ など" autocomplete="off"><datalist id="nwDL"></datalist></div>
     <div class="row2">
-      <div class="field"><label>開始</label><input type="time" id="nwStart" value="${fmtTime(startMs)}"></div>
-      <div class="field"><label>終了</label><input type="time" id="nwEnd" value="${fmtTime(endMs)}"></div>
+      <div class="field"><label>開始</label>${tfWrap("nwStart",fmtTime(startMs))}</div>
+      <div class="field"><label>終了</label>${tfWrap("nwEnd",fmtTime(endMs),"right")}</div>
     </div>
     <div class="field"><label>メモ</label><textarea id="nwMemo" rows="2" placeholder="用件・申し送りなど"></textarea></div>
     <div class="actions">
@@ -702,8 +874,9 @@ function openCreateEntry(startMs,endMs){
   const fillDL=()=>{ const c=getClient(document.getElementById("nwCli").value);
     document.getElementById("nwDL").innerHTML=state.tasks[taskSetFor(c)].map(t=>`<option value="${esc(t)}">`).join(""); };
   document.getElementById("nwCli").onchange=fillDL; fillDL();
+  initTF(sheetBody);
   document.getElementById("nwSave").onclick=()=>{
-    const sv=document.getElementById("nwStart").value, evv=document.getElementById("nwEnd").value;
+    const sv=getTF("nwStart"), evv=getTF("nwEnd");
     if(!sv||!evv){ toast("時刻を入力してください"); return; }
     const base=startOfDay(selDate);
     const p=v=>{ const [h,m]=v.split(":").map(Number); return new Date(base.getFullYear(),base.getMonth(),base.getDate(),h||0,m||0).getTime(); };
@@ -711,6 +884,7 @@ function openCreateEntry(startMs,endMs){
     state.entries.push({id:uid(),clientId:document.getElementById("nwCli").value,
       task:document.getElementById("nwTask").value.trim(),start:s,end:e2,
       memo:document.getElementById("nwMemo").value});
+    markDayDirty(s);
     save(); closeSheet(); renderAll(); toast("記録を追加しました");
   };
   openSheet();
@@ -733,8 +907,8 @@ function openEditEntry(id){
       <datalist id="taskDL"></datalist>
     </div>
     <div class="row2">
-      <div class="field"><label>開始</label><input type="time" id="edStart" value="${fmtTime(e.start)}"></div>
-      <div class="field"><label>終了</label><input type="time" id="edEnd" value="${e.end?fmtTime(e.end):""}" ${running?"disabled":""}></div>
+      <div class="field"><label>開始</label>${tfWrap("edStart",fmtTime(e.start))}</div>
+      <div class="field"><label>終了</label>${running?tfDisabled("進行中"):tfWrap("edEnd",e.end?fmtTime(e.end):"","right")}</div>
     </div>
     ${running?`<div class="hint">この記録は進行中です。終了時刻は「停止」で確定します。</div>`:""}
     <div class="field"><label>メモ</label><textarea id="edMemo" rows="3" placeholder="この作業のメモ(申し送り・次回確認事項など)">${esc(e.memo||"")}</textarea></div>
@@ -747,24 +921,28 @@ function openEditEntry(id){
   const fillDL=()=>{ const c=getClient(document.getElementById("edCli").value); const set=state.tasks[taskSetFor(c)];
     document.getElementById("taskDL").innerHTML=set.map(t=>`<option value="${esc(t)}">`).join(""); };
   document.getElementById("edCli").onchange=fillDL; fillDL();
+  initTF(sheetBody);
 
   document.getElementById("edSave").onclick=()=>{
     e.clientId=document.getElementById("edCli").value;
     e.task=document.getElementById("edTask").value.trim();
     e.memo=document.getElementById("edMemo").value;
-    const [sh,sm]=document.getElementById("edStart").value.split(":").map(Number);
+    const sv=getTF("edStart"); if(!sv){ toast("開始時刻を入れてください"); return; }
+    const [sh,sm]=sv.split(":").map(Number);
     const base=dayStr.split("-").map(Number);
     const sd=new Date(base[0],base[1]-1,base[2],sh||0,sm||0,0,0); e.start=sd.getTime();
     if(!running){
-      const ev=document.getElementById("edEnd").value;
+      const ev=getTF("edEnd");
       if(ev){ const [eh,em]=ev.split(":").map(Number); let ed=new Date(base[0],base[1]-1,base[2],eh,em,0,0);
         if(ed.getTime()<e.start) ed=new Date(ed.getTime()+86400000); // 日跨ぎ
         e.end=ed.getTime(); }
     }
+    markDayDirty(e.start);
     save(); closeSheet(); renderAll(); toast("修正を保存しました");
   };
   const stopEl=document.getElementById("edStop"); if(stopEl) stopEl.onclick=()=>{ e.end=Date.now(); save(); closeSheet(); renderAll(); toast("計測を停止しました"); };
   document.getElementById("edDel").onclick=()=>{
+    markDayDirty(e.start);
     state.entries=state.entries.filter(x=>x.id!==e.id); save(); closeSheet(); renderAll(); toast("記録を削除しました");
   };
   openSheet();
@@ -819,6 +997,220 @@ function renderSide(){
     autoGrow(memo);
   }
 }
+
+/* ============================================================
+   日報の書き出し（Obsidian / メール向け）
+============================================================ */
+function buildReport(date, fmt){
+  const md = fmt!=="plain";
+  const now=Date.now();
+  const key=dateKey(date);
+  const entries=state.entries.filter(e=>isSameDay(new Date(e.start),date)).sort((a,b)=>a.start-b.start);
+  const dateStr=date.getFullYear()+"-"+String(date.getMonth()+1).padStart(2,"0")+"-"+String(date.getDate()).padStart(2,"0")+"（"+DOW[date.getDay()]+"）";
+  let total=0; entries.forEach(e=>total+=((e.end||now)-e.start)/60000);
+
+  const memoLines=(txt,indent)=>String(txt||"").split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(s=>indent+s);
+
+  const L=[];
+  if(md){
+    L.push("# 業務日報 "+dateStr,"","**合計 "+fmtDur(total)+"**","");
+    L.push("## 作業記録");
+    if(entries.length===0) L.push("（記録なし）");
+    for(const e of entries){
+      const c=getClient(e.clientId); const end=e.end||now; const dur=(end-e.start)/60000;
+      const cli=(c.code?c.code+" ":"")+c.name;
+      const et=e.end?fmtTime(end):"進行中";
+      L.push(`- **${fmtTime(e.start)}–${et}**（${fmtDur(dur)}）${cli}${e.task?" ｜ "+e.task:""}`);
+      memoLines(e.memo,"  - ").forEach(x=>L.push(x));
+    }
+  }else{
+    L.push("■ 業務日報 "+dateStr,"合計 "+fmtDur(total),"","【作業記録】");
+    if(entries.length===0) L.push("（記録なし）");
+    for(const e of entries){
+      const c=getClient(e.clientId); const end=e.end||now; const dur=(end-e.start)/60000;
+      const cli=(c.code?c.code+" ":"")+c.name;
+      const et=e.end?fmtTime(end):"進行中";
+      L.push(`${fmtTime(e.start)}–${et}（${fmtDur(dur)}）${cli}${e.task?" ｜ "+e.task:""}`);
+      memoLines(e.memo,"  ・").forEach(x=>L.push(x));
+    }
+  }
+
+  // 内訳（顧問先別合計）
+  const byCli=new Map();
+  for(const e of entries){ const end=e.end||now; const m=(end-e.start)/60000;
+    const c=getClient(e.clientId); const lab=(c.code?c.code+" ":"")+c.name;
+    byCli.set(lab,(byCli.get(lab)||0)+m); }
+  if(byCli.size){
+    L.push("", md?"## 内訳":"【内訳】");
+    [...byCli.entries()].sort((a,b)=>b[1]-a[1]).forEach(([lab,m])=>L.push((md?"- ":"")+lab+" … "+fmtDur(m)));
+  }
+
+  // 所感・申し送り（日メモ）
+  const dm=(state.dayMemos[key]||"").trim();
+  if(dm){ L.push("", md?"## 所感・申し送り":"【所感・申し送り】", dm); }
+
+  return L.join("\n");
+}
+
+let exportFmt="md";
+const FS_SUPPORTED = !!(window.showDirectoryPicker);
+const TT_MARK_START = "<!-- time-tracker -->";
+const TT_MARK_END   = "<!-- /time-tracker -->";
+
+function openExport(){
+  const d=selDate;
+  sheetHead.innerHTML=`<button class="back" id="backExp">‹</button><h2>日報の書き出し</h2>`;
+  const primaryHTML = FS_SUPPORTED
+    ? `<button class="btn-fill" id="expSave">Obsidianに保存</button><button class="btn-ghost" id="expCopy">コピー</button>`
+    : `<button class="btn-fill" id="expCopy">コピー</button>`;
+  sheetBody.innerHTML=`
+    <div class="hint" style="margin:2px 4px 8px">${(d.getMonth()+1)}/${d.getDate()}（${DOW[d.getDay()]}）の記録・メモを整形します。</div>
+    <div class="seg" id="expSeg" style="margin:6px 4px 10px">
+      <button data-f="md" class="${exportFmt==="md"?"on":""}">Markdown</button>
+      <button data-f="plain" class="${exportFmt==="plain"?"on":""}">テキスト</button>
+    </div>
+    <textarea class="export-pre" id="expPre" spellcheck="false" readonly></textarea>
+    ${FS_SUPPORTED?`<div class="fs-row" id="fsRow"></div>`:`<div class="hint" style="margin:10px 4px 2px">この端末は直接保存に非対応です（iPhone/Safari等）。コピーしてObsidianに貼り付けてください。</div>`}
+    <div class="actions">
+      ${primaryHTML}
+      <button class="btn-ghost" id="expClose">閉じる</button>
+    </div>`;
+  const pre=document.getElementById("expPre");
+  const draw=()=>{ pre.value=buildReport(d,exportFmt); };
+  draw();
+  const seg=document.getElementById("expSeg");
+  seg.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    seg.querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on");
+    exportFmt=b.dataset.f; draw();
+  });
+  document.getElementById("backExp").onclick=closeSheet;
+  document.getElementById("expClose").onclick=closeSheet;
+  document.getElementById("expCopy").onclick=()=>copyText(pre.value, pre);
+  const saveBtn=document.getElementById("expSave");
+  if(saveBtn) saveBtn.onclick=()=>saveToObsidian(d);
+  if(FS_SUPPORTED) refreshFsRow();
+  openSheet();
+}
+async function refreshFsRow(){
+  const row=document.getElementById("fsRow"); if(!row) return;
+  let dir=null; try{ dir=await idbGet("vaultDir"); }catch(e){}
+  if(dir){
+    row.innerHTML=`保存先：<b>${esc(dir.name)}</b> フォルダ<button class="lk" id="fsChg">変更</button>`;
+    row.querySelector("#fsChg").onclick=async()=>{ const nd=await pickVaultDir(); if(nd){ toast("保存先を変更しました"); refreshFsRow(); } };
+  }else{
+    row.innerHTML=`保存先フォルダ未設定<button class="lk" id="fsSet">フォルダを選ぶ</button>`;
+    row.querySelector("#fsSet").onclick=async()=>{ const nd=await pickVaultDir(); if(nd){ toast("保存先を設定しました"); refreshFsRow(); } };
+  }
+}
+function copyText(txt, el){
+  const done=()=>toast("コピーしました");
+  const fail=()=>{ if(el){ el.focus(); el.select(); } toast("コピーできませんでした。長押しで選択してください"); };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done).catch(()=>{
+      try{ if(el){ el.focus(); el.select(); document.execCommand("copy"); done(); } else fail(); }catch(e){ fail(); }
+    });
+  }else{
+    try{ if(el){ el.focus(); el.select(); document.execCommand("copy"); done(); } else fail(); }catch(e){ fail(); }
+  }
+}
+
+/* ---- Obsidian 直接保存（File System Access API） ---- */
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open("tt-fs",1);
+    r.onupgradeneeded=()=>{ if(!r.result.objectStoreNames.contains("h")) r.result.createObjectStore("h"); };
+    r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+  });
+}
+async function idbSet(key,val){ const db=await idbOpen(); return new Promise((res,rej)=>{ const tx=db.transaction("h","readwrite"); tx.objectStore("h").put(val,key); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+async function idbGet(key){ const db=await idbOpen(); return new Promise((res,rej)=>{ const tx=db.transaction("h","readonly"); const g=tx.objectStore("h").get(key); g.onsuccess=()=>res(g.result); g.onerror=()=>rej(g.error); }); }
+async function pickVaultDir(){
+  try{ const dir=await window.showDirectoryPicker({mode:"readwrite",id:"tt-vault"}); await idbSet("vaultDir",dir); return dir; }
+  catch(e){ return null; }   // キャンセル含む
+}
+async function ensurePermission(handle){
+  const opts={mode:"readwrite"};
+  if((await handle.queryPermission(opts))==="granted") return true;
+  if((await handle.requestPermission(opts))==="granted") return true;
+  return false;
+}
+async function writeReportToDir(dir, d){
+  const fname=dateKey(d)+".md";
+  const report=buildReport(d,"md");
+  const block=TT_MARK_START+"\n"+report+"\n"+TT_MARK_END;
+  const fh=await dir.getFileHandle(fname,{create:true});
+  let existing=""; try{ const f=await fh.getFile(); existing=await f.text(); }catch(e){}
+  let out;
+  const s=existing.indexOf(TT_MARK_START), en=existing.indexOf(TT_MARK_END);
+  if(s!==-1 && en!==-1 && en>s){                       // 既存の日報ブロックだけ差し替え（手書き部分は保持）
+    out=existing.slice(0,s)+block+existing.slice(en+TT_MARK_END.length);
+  }else if(existing.trim()){                            // 手書きノートがあれば末尾に追記
+    out=existing.replace(/\s*$/,"")+"\n\n"+block+"\n";
+  }else{
+    out=block+"\n";
+  }
+  const w=await fh.createWritable(); await w.write(out); await w.close();
+  return fname;
+}
+async function saveToObsidian(d){
+  if(!FS_SUPPORTED){ toast("この端末では直接保存に非対応です"); return; }
+  try{
+    let dir=await idbGet("vaultDir");
+    if(!dir){ dir=await pickVaultDir(); if(!dir) return; refreshFsRow(); }
+    if(!(await ensurePermission(dir))){ toast("フォルダへの書き込みが許可されませんでした"); return; }
+    const fname=await writeReportToDir(dir,d);
+    state.savedDays[dateKey(d)]=true; save();
+    toast(fname+" に保存しました");
+  }catch(e){
+    toast("保存できませんでした（フォルダの許可を確認）");
+  }
+}
+
+/* ---- 翌日起動時：締め忘れが無ければ前日分（未保存の過去日）を自動保存 ---- */
+function unsavedPastDays(){
+  const today=startOfDay(new Date()).getTime();
+  const set=new Set();
+  for(const e of state.entries){
+    const t=startOfDay(new Date(e.start)).getTime();
+    if(t<today && t>=today-7*86400000){                // 直近7日以内の過去日
+      const k=dateKey(new Date(e.start));
+      if(!state.savedDays[k]) set.add(k);
+    }
+  }
+  return [...set].sort();
+}
+async function autoSaveYesterday(){
+  if(!FS_SUPPORTED) return;
+  const days=unsavedPastDays();
+  if(days.length===0) return;
+  let dir=null; try{ dir=await idbGet("vaultDir"); }catch(e){}
+  if(!dir) return;                                      // 保存先未設定なら何もしない（初回は手動保存で設定）
+  let perm="prompt"; try{ perm=await dir.queryPermission({mode:"readwrite"}); }catch(e){}
+  if(perm==="granted"){                                 // 許可が残っていれば完全自動
+    let n=0;
+    for(const k of days){ try{ await writeReportToDir(dir,dayFromKey(k)); state.savedDays[k]=true; n++; }catch(e){} }
+    if(n){ save(); toast(n>1?`前日までの日報を${n}日分保存しました`:"前日の日報を保存しました"); }
+  }else{
+    showSaveBanner(days);                               // 許可にタップが要る → 1タップ保存を促す
+  }
+}
+function dayFromKey(k){ const [y,mo,da]=k.split("-").map(Number); return new Date(y,mo-1,da); }
+function showSaveBanner(days){
+  const b=document.getElementById("banner"); if(!b) return;
+  document.getElementById("bnTxt").textContent = days.length>1
+    ? `未保存の日報が${days.length}日分あります`
+    : `前日の日報をObsidianに保存できます`;
+  b.hidden=false;
+  document.getElementById("bnGo").onclick=async()=>{
+    let dir=await idbGet("vaultDir"); if(!dir){ dir=await pickVaultDir(); if(!dir) return; }
+    if(!(await ensurePermission(dir))){ toast("フォルダの許可が必要です"); return; }
+    let n=0;
+    for(const k of days){ try{ await writeReportToDir(dir,dayFromKey(k)); state.savedDays[k]=true; n++; }catch(e){} }
+    save(); b.hidden=true; toast(n>1?`${n}日分を保存しました`:"保存しました");
+  };
+  document.getElementById("bnX").onclick=()=>{ b.hidden=true; };
+}
+document.getElementById("expBtnH").onclick=openExport;
 
 /* ============================================================
    集計
@@ -955,6 +1347,7 @@ function importData(file){
     if(!confirm(`このバックアップ(顧問先${nCli}件・記録${s.entries.length}件)で現在のデータを置き換えます。よろしいですか?`)) return;
     if(!s.tasks) s.tasks={client:[...DEFAULT_TASKS.client],internal:[...DEFAULT_TASKS.internal]};
     if(!s.dayMemos) s.dayMemos={};
+    if(!s.savedDays) s.savedDays={};
     state=s; save(); closeSheet(); renderAll(); toast("読み込みました");
   };
   r.readAsText(file);
@@ -1054,6 +1447,7 @@ setInterval(()=>{
 /* 初期化 */
 renderAll();
 scrollToRelevant();
+if(!checkStaleRunning()) autoSaveYesterday();   // 締め忘れが無ければ前日分を自動保存
 </script>
 </body>
 </html>
