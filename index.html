@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>工数トラッカー</title>
+<title>工数ログ</title>
 <style>
   :root{
     /* --- 業務日報 / 台帳の質感 --- */
@@ -161,6 +161,12 @@
   .sum-bar{height:100%;border-radius:4px}
   .sum-time{flex:0 0 auto;font-family:var(--font-mono);font-size:12px;color:var(--ink-soft);width:52px;text-align:right}
   .sum-sub{margin:8px 0 4px;font-size:11px;color:var(--figure);font-weight:600}
+  .sum-toggle{display:inline-flex;border:1px solid var(--rule-strong);border-radius:8px;overflow:hidden;margin-bottom:8px}
+  .sum-toggle button{padding:5px 16px;font-size:12px;font-weight:700;color:var(--figure);background:var(--paper)}
+  .sum-toggle button.on{background:var(--ink);color:#fff}
+  .sum-meta{font-size:11.5px;color:var(--ink-soft);margin:-2px 0 6px}
+  .sum-copy{margin-left:8px;font-size:11px;color:var(--figure);text-decoration:underline;padding:2px 4px}
+  .sum-copy:hover{color:var(--ink)}
 
   /* ---------- 下部アクション ---------- */
   .dock{
@@ -184,7 +190,6 @@
   .run-elapsed{font-family:var(--font-mono);font-weight:700;font-size:16px;color:var(--shu)}
   .btn-stop{border-radius:10px;padding:0 16px;background:var(--shu);color:#fff;font-weight:700;font-size:14px}
   .btn-switch{border-radius:10px;padding:0 14px;border:1px solid var(--rule-strong);color:var(--ink-soft);font-weight:600}
-  .sum-toggle{margin-left:auto}
 
   /* ---------- シート / モーダル ---------- */
   .scrim{position:fixed;inset:0;background:rgba(30,42,56,.38);z-index:40;display:none;opacity:0;transition:opacity .18s}
@@ -339,13 +344,13 @@
     <span class="date-dow" id="dateDow"></span>
   </div>
   <div class="spacer"></div>
-  <button class="icon-btn" id="sumBtn" aria-label="集計">
+  <button class="icon-btn" id="sumBtn" aria-label="集計" title="集計（顧問先別の時間）">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
   </button>
-  <button class="icon-btn" id="expBtnH" aria-label="日報を書き出す">
+  <button class="icon-btn" id="expBtnH" aria-label="日報を書き出す" title="日報を書き出す（Obsidian保存・コピー）">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9l4 4v3"/><path d="M14 3v4h4"/><path d="M15 15h6M18 12l3 3-3 3"/></svg>
   </button>
-  <button class="icon-btn" id="setBtn" aria-label="設定">
+  <button class="icon-btn" id="setBtn" aria-label="設定" title="設定">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </button>
 </header>
@@ -382,9 +387,10 @@
 <script>
 "use strict";
 /* ============================================================
-   工数トラッカー  v0.1
-   縦型タイムライン / 顧問先別 工数記録
+   工数ログ  （最終更新 2026-07）
+   縦型タイムライン / 顧問先別の工数記録
    単一HTML・LocalStorage保存
+   日報の書き出し（Markdown/テキスト）・Obsidian直接保存
 ============================================================ */
 
 const STORE_KEY = "timeTracker.v1";
@@ -644,7 +650,7 @@ const scrim=document.getElementById("scrim");
 const sheet=document.getElementById("sheet");
 const sheetHead=document.getElementById("sheetHead");
 const sheetBody=document.getElementById("sheetBody");
-function openSheet(){ scrim.classList.add("open"); sheet.classList.add("open"); }
+function openSheet(){ const bn=document.getElementById("banner"); if(bn) bn.hidden=true; scrim.classList.add("open"); sheet.classList.add("open"); }
 function closeSheet(){ scrim.classList.remove("open"); sheet.classList.remove("open"); }
 scrim.onclick=closeSheet;
 
@@ -915,7 +921,10 @@ function openEditEntry(id){
     <div class="actions">
       <button class="btn-fill" id="edSave">保存</button>
       ${running?`<button class="btn-ghost" id="edStop">停止</button>`:""}
-      <button class="btn-danger" id="edDel">削除</button>
+    </div>
+    <div class="actions" style="margin-top:8px">
+      ${!running?`<button class="btn-ghost" id="edDup" style="flex:1">複製</button>`:""}
+      <button class="btn-danger" id="edDel" style="flex:1">削除</button>
     </div>`;
   // datalist を顧問先種別に追随
   const fillDL=()=>{ const c=getClient(document.getElementById("edCli").value); const set=state.tasks[taskSetFor(c)];
@@ -941,6 +950,13 @@ function openEditEntry(id){
     save(); closeSheet(); renderAll(); toast("修正を保存しました");
   };
   const stopEl=document.getElementById("edStop"); if(stopEl) stopEl.onclick=()=>{ e.end=Date.now(); save(); closeSheet(); renderAll(); toast("計測を停止しました"); };
+  const dupEl=document.getElementById("edDup"); if(dupEl) dupEl.onclick=()=>{
+    const dur=(e.end||Date.now())-e.start;                 // 同じ長さ
+    const ns=e.end||Date.now(), ne=ns+dur;                 // 直後に配置
+    state.entries.push({id:uid(),clientId:e.clientId,task:e.task,start:ns,end:ne,memo:e.memo||""});
+    markDayDirty(ns);
+    save(); closeSheet(); renderAll(); toast("複製しました（直後に配置）");
+  };
   document.getElementById("edDel").onclick=()=>{
     markDayDirty(e.start);
     state.entries=state.entries.filter(x=>x.id!==e.id); save(); closeSheet(); renderAll(); toast("記録を削除しました");
@@ -1191,22 +1207,35 @@ async function autoSaveYesterday(){
     for(const k of days){ try{ await writeReportToDir(dir,dayFromKey(k)); state.savedDays[k]=true; n++; }catch(e){} }
     if(n){ save(); toast(n>1?`前日までの日報を${n}日分保存しました`:"前日の日報を保存しました"); }
   }else{
-    showSaveBanner(days);                               // 許可にタップが要る → 1タップ保存を促す
+    showSaveBanner(days, dir);                          // 許可にタップが要る → 1タップ保存を促す
   }
 }
 function dayFromKey(k){ const [y,mo,da]=k.split("-").map(Number); return new Date(y,mo-1,da); }
-function showSaveBanner(days){
+function showSaveBanner(days, dir){
   const b=document.getElementById("banner"); if(!b) return;
-  document.getElementById("bnTxt").textContent = days.length>1
-    ? `未保存の日報が${days.length}日分あります`
-    : `前日の日報をObsidianに保存できます`;
+  const txt=document.getElementById("bnTxt");
+  const setLabel=()=>{ txt.textContent = days.length>1
+      ? `未保存の日報が${days.length}日分あります` : `前日の日報をObsidianに保存できます`; };
+  setLabel();
   b.hidden=false;
-  document.getElementById("bnGo").onclick=async()=>{
-    let dir=await idbGet("vaultDir"); if(!dir){ dir=await pickVaultDir(); if(!dir) return; }
-    if(!(await ensurePermission(dir))){ toast("フォルダの許可が必要です"); return; }
-    let n=0;
-    for(const k of days){ try{ await writeReportToDir(dir,dayFromKey(k)); state.savedDays[k]=true; n++; }catch(e){} }
-    save(); b.hidden=true; toast(n>1?`${n}日分を保存しました`:"保存しました");
+  const go=document.getElementById("bnGo");
+  go.onclick=async()=>{
+    go.disabled=true; txt.textContent="保存中…";
+    try{
+      let d=dir; if(!d){ d=await idbGet("vaultDir"); }
+      if(!d){ d=await pickVaultDir(); if(!d){ setLabel(); go.disabled=false; return; } }
+      // 許可を取得（再読み込み後はここで1回だけEdgeが確認を出す）
+      let ok=(await d.queryPermission({mode:"readwrite"}))==="granted";
+      if(!ok) ok=(await d.requestPermission({mode:"readwrite"}))==="granted";
+      if(!ok){ txt.textContent="許可されませんでした。もう一度「保存」を押してください"; go.disabled=false; return; }
+      let n=0, fail=0;
+      for(const k of days){ try{ await writeReportToDir(d,dayFromKey(k)); state.savedDays[k]=true; n++; }catch(e){ fail++; } }
+      save();
+      if(fail===0){ b.hidden=true; toast(n>1?`${n}日分を保存しました`:"保存しました"); }
+      else{ txt.textContent=`${n}日分保存／${fail}日分失敗`; go.disabled=false; }
+    }catch(e){
+      txt.textContent="保存できませんでした。もう一度お試しください"; go.disabled=false;
+    }
   };
   document.getElementById("bnX").onclick=()=>{ b.hidden=true; };
 }
@@ -1217,22 +1246,39 @@ document.getElementById("expBtnH").onclick=openExport;
 ============================================================ */
 const summaryEl=document.getElementById("summary");
 let summaryOpen=false;
+let summaryMode="day";   // "day" | "month"
 document.getElementById("sumBtn").onclick=()=>{ summaryOpen=!summaryOpen; renderSummary(); };
 function renderSummary(){
   summaryEl.classList.toggle("open",summaryOpen);
   if(!summaryOpen){ summaryEl.innerHTML=""; return; }
-  const dayEntries=state.entries.filter(e=>isSameDay(new Date(e.start),selDate));
   const now=Date.now();
-  const byCli=new Map(), byTask=new Map(); let total=0;
-  for(const e of dayEntries){
+  const isMonth = summaryMode==="month";
+  const inScope = isMonth
+    ? (e)=>{ const d=new Date(e.start); return d.getFullYear()===selDate.getFullYear() && d.getMonth()===selDate.getMonth(); }
+    : (e)=> isSameDay(new Date(e.start),selDate);
+  const scoped=state.entries.filter(inScope);
+  const byCli=new Map(), byTask=new Map(); let total=0; const daySet=new Set();
+  for(const e of scoped){
     const min=((e.end||now)-e.start)/60000; total+=min;
     byCli.set(e.clientId,(byCli.get(e.clientId)||0)+min);
     const key=e.task||"(未設定)"; byTask.set(key,(byTask.get(key)||0)+min);
+    daySet.add(dateKey(new Date(e.start)));
   }
   const cliRows=[...byCli.entries()].sort((a,b)=>b[1]-a[1]);
   const taskRows=[...byTask.entries()].sort((a,b)=>b[1]-a[1]);
   const max=Math.max(1,...cliRows.map(r=>r[1]));
-  let html=`<div class="sum-head"><h3>${(selDate.getMonth()+1)}/${selDate.getDate()} の工数</h3><span class="sum-total mono">${fmtDur(total)}</span></div>`;
+
+  const title = isMonth
+    ? `${selDate.getFullYear()}年${selDate.getMonth()+1}月 の工数`
+    : `${(selDate.getMonth()+1)}/${selDate.getDate()} の工数`;
+  let html=`<div class="sum-head"><h3>${title}</h3><span class="sum-total mono">${fmtDur(total)}</span></div>`;
+  html+=`<div class="sum-toggle">
+      <button data-m="day" class="${!isMonth?"on":""}">日</button>
+      <button data-m="month" class="${isMonth?"on":""}">月</button>
+    </div>`;
+  if(isMonth && cliRows.length){
+    html+=`<div class="sum-meta">稼働 ${daySet.size}日 ・ 顧問先 ${cliRows.length}件<button class="sum-copy" id="sumCopy">コピー</button></div>`;
+  }
   if(cliRows.length===0){ html+=`<div class="hint">記録がありません。</div>`; }
   else{
     html+=`<div class="sum-sub">顧問先別</div>`;
@@ -1250,6 +1296,17 @@ function renderSummary(){
         <span class="sum-time mono">${fmtDurShort(min)}</span></div>`; }
   }
   summaryEl.innerHTML=html;
+  summaryEl.querySelectorAll(".sum-toggle button").forEach(b=>b.onclick=()=>{ summaryMode=b.dataset.m; renderSummary(); });
+  const cp=document.getElementById("sumCopy");
+  if(cp) cp.onclick=()=>copyText(buildMonthSummaryText(selDate,cliRows), null);
+}
+function buildMonthSummaryText(d, cliRows){
+  const L=[`${d.getFullYear()}年${d.getMonth()+1}月 工数（顧問先別）`];
+  let total=0;
+  for(const [cid,min] of cliRows){ const c=getClient(cid); total+=min;
+    L.push(`${(c.code?c.code+" ":"")+c.name} … ${fmtDur(min)}`); }
+  L.push(`合計 … ${fmtDur(total)}`);
+  return L.join("\n");
 }
 
 /* ============================================================
