@@ -145,12 +145,26 @@
     font-size:13px;pointer-events:none;padding:0 20px;
   }
 
-  /* ---------- 集計バー ---------- */
-  .summary{
-    flex:0 0 auto;border-top:1px solid var(--rule);background:var(--paper-2);
-    padding:10px 16px;max-height:34vh;overflow-y:auto;display:none;
-  }
-  .summary.open{display:block}
+  /* ---------- ふりかえり（月ダッシュボード・画面切替） ---------- */
+  body.mode-analysis .work{display:none}
+  body.mode-analysis .today-btn,body.mode-analysis .nav,body.mode-analysis .date-jump{display:none}
+  .ana-head-title{font-family:var(--font-disp);font-size:22px;font-weight:600;letter-spacing:.02em}
+  .icon-btn.active{background:var(--ink);border-color:var(--ink);color:#fff}
+  .icon-btn.active:hover{color:#fff}
+  .analysis{display:none}
+  body.mode-analysis .analysis{display:block;flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px 16px calc(18px + var(--safe-b))}
+  .ana-inner{max-width:720px;margin:0 auto}
+  .ana-nav{display:flex;align-items:center;gap:6px}
+  .ana-nav button{width:34px;height:34px;border-radius:9px;border:1px solid var(--rule);background:var(--paper-2);color:var(--ink-soft);font-size:18px;display:grid;place-items:center}
+  .ana-nav button:hover{border-color:var(--figure);color:var(--ink)}
+  .ana-title{font-family:var(--font-disp);font-size:20px;font-weight:600;letter-spacing:.02em;min-width:128px;text-align:center}
+  .ana-this{width:auto!important;padding:0 13px;font-size:12px;font-weight:600;margin-left:auto}
+  .ana-hero{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:12px 4px 4px}
+  .ana-total{font-family:var(--font-disp);font-size:36px;font-weight:600;letter-spacing:.01em;line-height:1}
+  .ana-meta{font-size:12px;color:var(--ink-soft)}
+  .ana-card{background:var(--paper-2);border:1px solid var(--rule);border-radius:14px;padding:13px 15px 12px;margin:13px 0 0;box-shadow:var(--shadow)}
+  .ana-card h4{margin:0 0 10px;font-size:12px;font-weight:700;color:var(--ink-soft);letter-spacing:.05em}
+  .ana-card h4 .sub{font-weight:400;color:var(--figure)}
   .sum-head{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
   .sum-head h3{margin:0;font-size:13px;font-weight:700}
   .sum-total{margin-left:auto;font-family:var(--font-mono);font-weight:700;font-size:15px}
@@ -429,8 +443,9 @@
     <span class="date-dow" id="dateDow"></span>
     <svg class="date-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
   </button>
+  <span class="ana-head-title" id="anaHeadTitle" hidden>ふりかえり</span>
   <div class="spacer"></div>
-  <button class="icon-btn" id="sumBtn" aria-label="集計" title="集計（顧問先別の時間）">
+  <button class="icon-btn" id="sumBtn" aria-label="ふりかえり" title="ふりかえり（月の俯瞰・顧問先別）">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
   </button>
   <button class="icon-btn" id="expBtnH" aria-label="日報を書き出す" title="日報を書き出す（Obsidian保存・コピー）">
@@ -450,7 +465,7 @@
   <aside class="side" id="side"></aside>
 </div>
 
-<div class="summary" id="summary"></div>
+<div class="analysis" id="analysis"><div class="ana-inner" id="anaInner"></div></div>
 
 <div class="dock" id="dock"></div>
 
@@ -1400,16 +1415,30 @@ function showSaveBanner(days, dir){
 document.getElementById("expBtnH").onclick=openExport;
 
 /* ============================================================
-   集計
+   ふりかえり（月ダッシュボード）… ヘッダのグラフアイコンで画面切替
 ============================================================ */
-const summaryEl=document.getElementById("summary");
-let summaryOpen=false;
-let summaryMode="day";        // "day" | "month" | "cal"
-let overviewMetric="min";     // 俯瞰の濃さ基準："min"(工数) | "count"(件数) | "client"(顧問先=色帯)
-document.getElementById("sumBtn").onclick=()=>{ summaryOpen=!summaryOpen; renderSummary(); };
+const anaInner=document.getElementById("anaInner");
+let appView="log";            // "log"(記録) | "analysis"(ふりかえり)
+let anaMonth=null;            // 表示中の月（1日固定）
+let overviewMetric="min";     // 暦の濃さ基準："min"(工数) | "count"(件数) | "client"(顧問先=色帯)
+
+function setView(v){
+  appView=v;
+  const isAna=v==="analysis";
+  if(isAna && !anaMonth) anaMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1);
+  document.body.classList.toggle("mode-analysis",isAna);
+  document.getElementById("sumBtn").classList.toggle("active",isAna);
+  document.getElementById("anaHeadTitle").hidden=!isAna;
+  if(isAna) renderAnalysis();
+  else { renderAll(); scrollToRelevant(); }
+}
+document.getElementById("sumBtn").onclick=()=>{
+  if(appView==="log") anaMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1);
+  setView(appView==="log"?"analysis":"log");
+};
 
 function monthCellData(year,month){
-  // day番号 -> {min,count,byClient:Map(clientId->min)}  … 俯瞰ビュー用
+  // day番号 -> {min,count,byClient:Map(clientId->min)}  … 俯瞰カレンダー用
   const now=Date.now(); const m=new Map();
   for(const e of state.entries){
     const d=new Date(e.start);
@@ -1422,19 +1451,12 @@ function monthCellData(year,month){
   }
   return m;
 }
-function wireToggle(){
-  summaryEl.querySelectorAll(".sum-toggle button").forEach(b=>b.onclick=()=>{ summaryMode=b.dataset.m; renderSummary(); });
-}
 
-function renderSummary(){
-  summaryEl.classList.toggle("open",summaryOpen);
-  if(!summaryOpen){ summaryEl.innerHTML=""; return; }
+function renderAnalysis(){
+  if(appView!=="analysis") return;
   const now=Date.now();
-  const isMonth = summaryMode==="month";
-  const isCal   = summaryMode==="cal";
-  const monthScope=(e)=>{ const d=new Date(e.start); return d.getFullYear()===selDate.getFullYear() && d.getMonth()===selDate.getMonth(); };
-  const inScope = (isMonth||isCal) ? monthScope : (e)=> isSameDay(new Date(e.start),selDate);
-  const scoped=state.entries.filter(inScope);
+  const y=anaMonth.getFullYear(), mo=anaMonth.getMonth();
+  const scoped=state.entries.filter(e=>{ const d=new Date(e.start); return d.getFullYear()===y&&d.getMonth()===mo; });
   const byCli=new Map(), byTask=new Map(); let total=0; const daySet=new Set();
   for(const e of scoped){
     const min=((e.end||now)-e.start)/60000; total+=min;
@@ -1445,58 +1467,57 @@ function renderSummary(){
   const cliRows=[...byCli.entries()].sort((a,b)=>b[1]-a[1]);
   const taskRows=[...byTask.entries()].sort((a,b)=>b[1]-a[1]);
   const max=Math.max(1,...cliRows.map(r=>r[1]));
+  const tmax=Math.max(1,...taskRows.map(r=>r[1]));
+  const nCli=cliRows.filter(([cid])=>getClient(cid).kind==="client").length;
 
-  const title = (isMonth||isCal)
-    ? `${selDate.getFullYear()}年${selDate.getMonth()+1}月 の工数`
-    : `${(selDate.getMonth()+1)}/${selDate.getDate()} の工数`;
-  let html=`<div class="sum-head"><h3>${title}</h3><span class="sum-total mono">${fmtDur(total)}</span></div>`;
-  html+=`<div class="sum-toggle">
-      <button data-m="day" class="${summaryMode==="day"?"on":""}">日</button>
-      <button data-m="month" class="${isMonth?"on":""}">月</button>
-      <button data-m="cal" class="${isCal?"on":""}">暦</button>
-    </div>`;
+  let html=`
+    <div class="ana-nav">
+      <button id="anaPrev" aria-label="前の月">‹</button>
+      <div class="ana-title">${y}年${mo+1}月</div>
+      <button id="anaNext" aria-label="次の月">›</button>
+      <button class="ana-this" id="anaThis">今月へ</button>
+    </div>
+    <div class="ana-hero">
+      <span class="ana-total">${fmtDur(total)}</span>
+      <span class="ana-meta">稼働 ${daySet.size}日 ・ ${scoped.length}件 ・ 顧問先 ${nCli}件
+        ${cliRows.length?`<button class="sum-copy" id="anaCopy">コピー</button>`:""}</span>
+    </div>
+    <div class="ana-card"><h4>月間カレンダー <span class="sub">— 日をタップで記録へ</span></h4>${drawOverviewHTML(y,mo)}</div>`;
 
-  if(isCal){
-    html+=drawOverviewHTML();
-    summaryEl.innerHTML=html;
-    wireToggle(); wireOverview();
-    return;
-  }
-
-  if(isMonth && cliRows.length){
-    html+=`<div class="sum-meta">稼働 ${daySet.size}日 ・ 顧問先 ${cliRows.length}件<button class="sum-copy" id="sumCopy">コピー</button></div>`;
-  }
-  if(cliRows.length===0){ html+=`<div class="hint">記録がありません。</div>`; }
-  else{
-    html+=`<div class="sum-sub">顧問先別 <span style="font-weight:400">（タップで履歴）</span></div>`;
+  if(cliRows.length===0){
+    html+=`<div class="ana-card"><div class="hint" style="margin:2px">この月の記録はまだありません。日をタップすると記録画面に移ります。</div></div>`;
+  }else{
+    html+=`<div class="ana-card"><h4>顧問先別 <span class="sub">— タップで履歴</span></h4>`;
     for(const [cid,min] of cliRows){ const c=getClient(cid);
       html+=`<div class="sum-row clickable" data-cid="${cid}"><span class="sum-dot" style="background:${c.color}"></span>
         <span class="sum-name">${esc((c.code?c.code+" ":"")+c.name)}</span>
         <span class="sum-bar-wrap"><span class="sum-bar" style="width:${(min/max*100).toFixed(1)}%;background:${c.color}"></span></span>
         <span class="sum-time mono">${fmtDurShort(min)}</span></div>`; }
-    html+=`<div class="sum-sub">業務別</div>`;
-    const tmax=Math.max(1,...taskRows.map(r=>r[1]));
+    html+=`</div><div class="ana-card"><h4>業務別</h4>`;
     for(const [t,min] of taskRows){
       html+=`<div class="sum-row"><span class="sum-dot" style="background:var(--rule-strong)"></span>
         <span class="sum-name">${esc(t)}</span>
         <span class="sum-bar-wrap"><span class="sum-bar" style="width:${(min/tmax*100).toFixed(1)}%;background:var(--figure)"></span></span>
         <span class="sum-time mono">${fmtDurShort(min)}</span></div>`; }
+    html+=`</div>`;
   }
-  summaryEl.innerHTML=html;
-  wireToggle();
-  summaryEl.querySelectorAll(".sum-row.clickable").forEach(el=>el.onclick=()=>openClientHistory(el.dataset.cid));
-  const cp=document.getElementById("sumCopy");
-  if(cp) cp.onclick=()=>copyText(buildMonthSummaryText(selDate,cliRows), null);
+  anaInner.innerHTML=html;
+
+  document.getElementById("anaPrev").onclick=()=>{ anaMonth=new Date(y,mo-1,1); renderAnalysis(); };
+  document.getElementById("anaNext").onclick=()=>{ anaMonth=new Date(y,mo+1,1); renderAnalysis(); };
+  document.getElementById("anaThis").onclick=()=>{ const n=new Date(); anaMonth=new Date(n.getFullYear(),n.getMonth(),1); renderAnalysis(); };
+  const cp=document.getElementById("anaCopy");
+  if(cp) cp.onclick=()=>copyText(buildMonthSummaryText(anaMonth,cliRows),null);
+  anaInner.querySelectorAll(".sum-row.clickable").forEach(el=>el.onclick=()=>openClientHistory(el.dataset.cid));
+  wireOverview();
 }
 
-/* ---- ③ 月カレンダー俯瞰（集計パネル内） ---- */
-function drawOverviewHTML(){
-  const y=selDate.getFullYear(), mo=selDate.getMonth();
+/* ---- 月間カレンダー（濃淡 / 色帯） ---- */
+function drawOverviewHTML(y,mo){
   const data=monthCellData(y,mo);
   const lead=new Date(y,mo,1).getDay();
   const dim=new Date(y,mo+1,0).getDate();
   const todayKey=dateKey(new Date());
-  const selKey=dateKey(selDate);
   const metric=overviewMetric;
   let maxMin=0,maxCnt=0;
   data.forEach(o=>{ if(o.min>maxMin)maxMin=o.min; if(o.count>maxCnt)maxCnt=o.count; });
@@ -1508,7 +1529,7 @@ function drawOverviewHTML(){
   for(let d=1;d<=dim;d++){
     const k=dateKeyOf(y,mo,d);
     const o=data.get(d);
-    const cls=["ov-cell"]; if(k===selKey)cls.push("sel"); if(k===todayKey)cls.push("today");
+    const cls=["ov-cell"]; if(k===todayKey)cls.push("today");
     let layer="", numDark=false;
     if(o){
       if(metric==="client"){
@@ -1532,11 +1553,6 @@ function drawOverviewHTML(){
   const foot = metric==="client" ? "各日の色帯 ＝ 顧問先ごとの時間の割合"
     : (metric==="count" ? "濃いほど記録件数が多い日" : "濃いほど工数の多い日");
   return `<div class="ov">
-      <div class="ov-nav">
-        <button id="ovPrev" aria-label="前の月">‹</button>
-        <div class="ov-title">${y}年${mo+1}月</div>
-        <button id="ovNext" aria-label="次の月">›</button>
-      </div>
       <div class="ov-metric">${metricBtns}</div>
       <div class="ov-dow">${dowCells}</div>
       <div class="ov-grid">${cells}</div>
@@ -1544,13 +1560,11 @@ function drawOverviewHTML(){
     </div>`;
 }
 function wireOverview(){
-  const prev=document.getElementById("ovPrev"), next=document.getElementById("ovNext");
-  if(prev) prev.onclick=()=>{ selDate=new Date(selDate.getFullYear(),selDate.getMonth()-1,1); renderAll(); };
-  if(next) next.onclick=()=>{ selDate=new Date(selDate.getFullYear(),selDate.getMonth()+1,1); renderAll(); };
-  summaryEl.querySelectorAll(".ov-metric button").forEach(b=>b.onclick=()=>{ overviewMetric=b.dataset.om; renderSummary(); });
-  summaryEl.querySelectorAll(".ov-cell[data-k]").forEach(b=>b.onclick=()=>{
+  anaInner.querySelectorAll(".ov-metric button").forEach(b=>b.onclick=()=>{ overviewMetric=b.dataset.om; renderAnalysis(); });
+  anaInner.querySelectorAll(".ov-cell[data-k]").forEach(b=>b.onclick=()=>{
     const [yy,mm,dd]=b.dataset.k.split("-").map(Number);
-    selDate=new Date(yy,mm-1,dd); renderAll(); scrollToRelevant();
+    selDate=new Date(yy,mm-1,dd);
+    setView("log");                    // 記録画面へ移動してその日を表示
   });
 }
 function buildMonthSummaryText(d, cliRows){
@@ -1840,15 +1854,15 @@ function scrollToRelevant(){
   scroll.scrollTo({top:y,behavior:"smooth"});
 }
 
-function renderAll(){ renderHeader(); renderTimeline(); renderSide(); renderDock(); renderSummary(); }
+function renderAll(){ renderHeader(); renderTimeline(); renderSide(); renderDock(); if(appView==="analysis") renderAnalysis(); }
 
 /* 進行中の毎秒更新(メモ入力中もカーソルが飛ばないよう、右パネルは再描画せず必要箇所だけ更新) */
 setInterval(()=>{
   const run=runningEntry();
   updateElapsed();
+  if(appView==="analysis") return;               // ふりかえり表示中は毎秒再描画しない（トグル操作を守る）
   if(!isSameDay(new Date(),selDate)) return;
   renderTimeline();                              // タイムライン(入力欄なし)は再描画OK
-  if(summaryOpen) renderSummary();
   // 右パネルはソフト更新のみ
   const now=Date.now();
   const dayEntries=state.entries.filter(e=>isSameDay(new Date(e.start),selDate));
