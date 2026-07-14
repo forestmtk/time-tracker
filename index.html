@@ -153,7 +153,7 @@
   .icon-btn.active:hover{color:#fff}
   .analysis{display:none}
   body.mode-analysis .analysis{display:block;flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px 16px calc(18px + var(--safe-b))}
-  .ana-inner{max-width:720px;margin:0 auto}
+  .ana-inner{max-width:1100px;margin:0 auto}
   .ana-nav{display:flex;align-items:center;gap:6px}
   .ana-nav button{width:34px;height:34px;border-radius:9px;border:1px solid var(--rule);background:var(--paper-2);color:var(--ink-soft);font-size:18px;display:grid;place-items:center}
   .ana-nav button:hover{border-color:var(--figure);color:var(--ink)}
@@ -165,6 +165,21 @@
   .ana-card{background:var(--paper-2);border:1px solid var(--rule);border-radius:14px;padding:13px 15px 12px;margin:13px 0 0;box-shadow:var(--shadow)}
   .ana-card h4{margin:0 0 10px;font-size:12px;font-weight:700;color:var(--ink-soft);letter-spacing:.05em}
   .ana-card h4 .sub{font-weight:400;color:var(--figure)}
+  .ana-main{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:13px;align-items:start}
+  .ana-two{display:grid;grid-template-columns:1fr 1fr;gap:13px;align-items:start}
+  .ana-day-card{position:sticky;top:0}
+  @media(max-width:900px){
+    .ana-main,.ana-two{grid-template-columns:1fr}
+    .ana-day-card{position:static}
+  }
+
+  /* 日詳細（カレンダー右のメモ欄） */
+  .ad-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 4px}
+  .ad-date{font-family:var(--font-disp);font-size:17px;font-weight:700}
+  .ad-total{font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--ink-soft)}
+  .ad-saved{font-size:10.5px;font-weight:700;color:#41684F;background:rgba(91,138,114,.14);border:1px solid rgba(91,138,114,.35);border-radius:99px;padding:2px 9px}
+  .ad-open{margin-left:auto;font-size:12px;font-weight:600;color:var(--ink-soft);border:1px solid var(--rule-strong);border-radius:8px;padding:5px 11px;background:var(--paper)}
+  .ad-open:hover{border-color:var(--figure);color:var(--ink)}
   .sum-head{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
   .sum-head h3{margin:0;font-size:13px;font-weight:700}
   .sum-total{margin-left:auto;font-family:var(--font-mono);font-weight:700;font-size:15px}
@@ -380,29 +395,26 @@
   .cal-foot span{display:inline-flex;align-items:center;gap:5px}
   .cal-foot .cal-foot-r{margin-left:auto;color:var(--figure);font-weight:600}
 
-  /* ---------- 集計パネル：月カレンダー俯瞰（濃淡 / 色帯） ---------- */
+  /* ---------- ふりかえり：月間カレンダー（工数＋濃淡＋顧問先色帯） ---------- */
   .ov{margin-top:2px}
-  .ov-nav{display:flex;align-items:center;gap:6px;margin:2px 0 8px}
-  .ov-nav button{width:32px;height:32px;border-radius:8px;border:1px solid var(--rule);color:var(--ink-soft);display:grid;place-items:center;font-size:18px;background:var(--paper-2)}
-  .ov-nav button:hover{border-color:var(--figure);color:var(--ink)}
-  .ov-title{flex:1;text-align:center;font-weight:700;font-size:13px}
-  .ov-metric{display:inline-flex;border:1px solid var(--rule-strong);border-radius:8px;overflow:hidden;margin-bottom:9px}
-  .ov-metric button{padding:5px 13px;font-size:11.5px;font-weight:700;color:var(--figure);background:var(--paper)}
-  .ov-metric button.on{background:var(--ink);color:#fff}
-  .ov-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:3px}
-  .ov-dow span{text-align:center;font-size:10px;font-weight:700;color:var(--figure)}
+  .ov-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
+  .ov-dow span{text-align:center;font-size:10.5px;font-weight:700;color:var(--figure)}
   .ov-dow span.sun{color:var(--shu)}.ov-dow span.sat{color:#3E6D9C}
-  .ov-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-  .ov-cell{position:relative;height:40px;border-radius:7px;border:1px solid var(--rule);overflow:hidden;display:flex;align-items:flex-start;justify-content:flex-end;padding:3px 4px 0;background:var(--paper)}
+  .ov-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .ov-cell{position:relative;height:74px;border-radius:8px;border:1px solid var(--rule);overflow:hidden;background:var(--paper);padding:0}
+  @media(max-width:900px){.ov-cell{height:58px}}
+  .ov-cell:hover{border-color:var(--figure)}
   .ov-cell.blank{border:none;background:transparent;pointer-events:none}
   .ov-cell.today{outline:1.6px solid var(--shu);outline-offset:-1.6px}
-  .ov-cell.sel{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink) inset}
+  .ov-cell.sel{border-color:var(--ink);box-shadow:0 0 0 1.4px var(--ink) inset}
   .ov-heat{position:absolute;inset:0;z-index:0}
-  .ov-band{position:absolute;left:0;right:0;bottom:0;height:11px;display:flex;z-index:1}
+  .ov-band{position:absolute;left:0;right:0;bottom:0;height:13px;display:flex;z-index:1}
   .ov-band i{display:block;height:100%}
-  .ov-num{position:relative;z-index:2;font-family:var(--font-mono);font-size:11px;font-weight:600;line-height:1;color:var(--ink)}
+  .ov-num{position:absolute;top:5px;left:7px;z-index:2;font-family:var(--font-mono);font-size:11.5px;font-weight:600;line-height:1;color:var(--ink)}
   .ov-num.dim{color:var(--figure)}
-  .ov-num.on-dark{color:#fff}
+  .ov-dur{position:absolute;left:0;right:0;top:47%;transform:translateY(-50%);z-index:2;text-align:center;font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--ink)}
+  @media(max-width:900px){.ov-dur{font-size:12px;top:52%}}
+  .ov-num.on-dark,.ov-dur.on-dark{color:#fff}
   .ov-foot{margin:10px 2px 2px;font-size:11.5px;color:var(--figure)}
 
   /* ---------- 顧問先履歴（集計パネルの行タップで開く） ---------- */
@@ -1431,7 +1443,7 @@ document.getElementById("expBtnH").onclick=openExport;
 const anaInner=document.getElementById("anaInner");
 let appView="log";            // "log"(記録) | "analysis"(ふりかえり)
 let anaMonth=null;            // 表示中の月（1日固定）
-let overviewMetric="min";     // 暦の濃さ基準："min"(工数) | "count"(件数) | "client"(顧問先=色帯)
+let anaSelDay=null;           // 日詳細パネルで選択中の日（"YYYY-MM-DD"）
 
 function setView(v){
   appView=v;
@@ -1481,6 +1493,14 @@ function renderAnalysis(){
   const tmax=Math.max(1,...taskRows.map(r=>r[1]));
   const nCli=cliRows.filter(([cid])=>getClient(cid).kind==="client").length;
 
+  // 選択日の初期化: 今月なら今日、そうでなければ記録のある最後の日
+  const prefix=`${y}-${String(mo+1).padStart(2,"0")}`;
+  if(!anaSelDay || !anaSelDay.startsWith(prefix)){
+    const todayKey=dateKey(new Date());
+    if(todayKey.startsWith(prefix)) anaSelDay=todayKey;
+    else{ const ds=[...daySet].sort(); anaSelDay=ds.length?ds[ds.length-1]:null; }
+  }
+
   let html=`
     <div class="ana-nav">
       <button id="anaPrev" aria-label="前の月">‹</button>
@@ -1493,12 +1513,13 @@ function renderAnalysis(){
       <span class="ana-meta">稼働 ${daySet.size}日 ・ ${scoped.length}件 ・ 顧問先 ${nCli}件
         ${cliRows.length?`<button class="sum-copy" id="anaCopy">コピー</button>`:""}</span>
     </div>
-    <div class="ana-card"><h4>月間カレンダー <span class="sub">— 日をタップで記録へ</span></h4>${drawOverviewHTML(y,mo)}</div>`;
+    <div class="ana-main">
+      <div class="ana-card"><h4>月間カレンダー <span class="sub">— 濃さ＝工数 ／ 下の色帯＝顧問先</span></h4>${drawOverviewHTML(y,mo)}</div>
+      <div class="ana-card ana-day-card" id="anaDayCard"></div>
+    </div>`;
 
-  if(cliRows.length===0){
-    html+=`<div class="ana-card"><div class="hint" style="margin:2px">この月の記録はまだありません。日をタップすると記録画面に移ります。</div></div>`;
-  }else{
-    html+=`<div class="ana-card"><h4>顧問先別 <span class="sub">— タップで履歴</span></h4>`;
+  if(cliRows.length){
+    html+=`<div class="ana-two"><div class="ana-card"><h4>顧問先別 <span class="sub">— タップで履歴</span></h4>`;
     for(const [cid,min] of cliRows){ const c=getClient(cid);
       html+=`<div class="sum-row clickable" data-cid="${cid}"><span class="sum-dot" style="background:${c.color}"></span>
         <span class="sum-name">${esc((c.code?c.code+" ":"")+c.name)}</span>
@@ -1510,28 +1531,30 @@ function renderAnalysis(){
         <span class="sum-name">${esc(t)}</span>
         <span class="sum-bar-wrap"><span class="sum-bar" style="width:${(min/tmax*100).toFixed(1)}%;background:var(--figure)"></span></span>
         <span class="sum-time mono">${fmtDurShort(min)}</span></div>`; }
-    html+=`</div>`;
+    html+=`</div></div>`;
+  }else{
+    html+=`<div class="ana-card"><div class="hint" style="margin:2px">この月の記録はまだありません。</div></div>`;
   }
   anaInner.innerHTML=html;
 
-  document.getElementById("anaPrev").onclick=()=>{ anaMonth=new Date(y,mo-1,1); renderAnalysis(); };
-  document.getElementById("anaNext").onclick=()=>{ anaMonth=new Date(y,mo+1,1); renderAnalysis(); };
-  document.getElementById("anaThis").onclick=()=>{ const n=new Date(); anaMonth=new Date(n.getFullYear(),n.getMonth(),1); renderAnalysis(); };
+  document.getElementById("anaPrev").onclick=()=>{ anaMonth=new Date(y,mo-1,1); anaSelDay=null; renderAnalysis(); };
+  document.getElementById("anaNext").onclick=()=>{ anaMonth=new Date(y,mo+1,1); anaSelDay=null; renderAnalysis(); };
+  document.getElementById("anaThis").onclick=()=>{ const n=new Date(); anaMonth=new Date(n.getFullYear(),n.getMonth(),1); anaSelDay=null; renderAnalysis(); };
   const cp=document.getElementById("anaCopy");
   if(cp) cp.onclick=()=>copyText(buildMonthSummaryText(anaMonth,cliRows),null);
   anaInner.querySelectorAll(".sum-row.clickable").forEach(el=>el.onclick=()=>openClientHistory(el.dataset.cid));
-  wireOverview();
+  anaInner.querySelectorAll(".ov-cell[data-k]").forEach(b=>b.onclick=()=>selectAnaDay(b.dataset.k));
+  renderAnaDay();
 }
 
-/* ---- 月間カレンダー（濃淡 / 色帯） ---- */
+/* ---- 月間カレンダー（工数テキスト＋濃淡＋顧問先色帯） ---- */
 function drawOverviewHTML(y,mo){
   const data=monthCellData(y,mo);
   const lead=new Date(y,mo,1).getDay();
   const dim=new Date(y,mo+1,0).getDate();
   const todayKey=dateKey(new Date());
-  const metric=overviewMetric;
-  let maxMin=0,maxCnt=0;
-  data.forEach(o=>{ if(o.min>maxMin)maxMin=o.min; if(o.count>maxCnt)maxCnt=o.count; });
+  let maxMin=0;
+  data.forEach(o=>{ if(o.min>maxMin)maxMin=o.min; });
 
   const dowCells=["日","月","火","水","木","金","土"]
     .map((w,i)=>`<span class="${i===0?"sun":i===6?"sat":""}">${w}</span>`).join("");
@@ -1540,43 +1563,88 @@ function drawOverviewHTML(y,mo){
   for(let d=1;d<=dim;d++){
     const k=dateKeyOf(y,mo,d);
     const o=data.get(d);
-    const cls=["ov-cell"]; if(k===todayKey)cls.push("today");
-    let layer="", numDark=false;
+    const cls=["ov-cell"]; if(k===anaSelDay)cls.push("sel"); if(k===todayKey)cls.push("today");
+    let layer="", durHtml="", dark=false;
     if(o){
-      if(metric==="client"){
-        const segs=[...o.byClient.entries()].sort((a,b)=>b[1]-a[1]);
-        const band=segs.map(([cid,mn])=>`<i style="width:${(mn/o.min*100).toFixed(2)}%;background:${getClient(cid).color}"></i>`).join("");
-        layer=`<span class="ov-band">${band}</span>`;
-      }else{
-        const v = metric==="count"? o.count : o.min;
-        const mx= metric==="count"? maxCnt : maxMin;
-        const a = mx>0 ? 0.12+0.66*(v/mx) : 0;
-        layer=`<span class="ov-heat" style="background:rgba(30,42,56,${a.toFixed(3)})"></span>`;
-        if(a>=0.46) numDark=true;
-      }
+      const a = maxMin>0 ? 0.07+0.45*(o.min/maxMin) : 0;   // 濃淡は控えめ上限（文字が主役）
+      dark = a>=0.34;
+      layer=`<span class="ov-heat" style="background:rgba(30,42,56,${a.toFixed(3)})"></span>`;
+      const segs=[...o.byClient.entries()].sort((x,z)=>z[1]-x[1]);
+      layer+=`<span class="ov-band">${segs.map(([cid,mn])=>`<i style="width:${(mn/o.min*100).toFixed(2)}%;background:${getClient(cid).color}"></i>`).join("")}</span>`;
+      durHtml=`<span class="ov-dur ${dark?"on-dark":""}">${fmtDurShort(o.min)}</span>`;
     }
-    const numCls = numDark ? "on-dark" : (o ? "" : "dim");
     const label = o ? `${fmtDur(o.min)}・${o.count}件` : "記録なし";
-    cells+=`<button class="${cls.join(" ")}" data-k="${k}" title="${mo+1}/${d} ${label}">${layer}<span class="ov-num ${numCls}">${d}</span></button>`;
+    cells+=`<button class="${cls.join(" ")}" data-k="${k}" title="${mo+1}/${d} ${label}">${layer}<span class="ov-num ${dark?"on-dark":(o?"":"dim")}">${d}</span>${durHtml}</button>`;
   }
-  const metricBtns=[["min","工数"],["count","件数"],["client","顧問先"]]
-    .map(([m,l])=>`<button data-om="${m}" class="${metric===m?"on":""}">${l}</button>`).join("");
-  const foot = metric==="client" ? "各日の色帯 ＝ 顧問先ごとの時間の割合"
-    : (metric==="count" ? "濃いほど記録件数が多い日" : "濃いほど工数の多い日");
   return `<div class="ov">
-      <div class="ov-metric">${metricBtns}</div>
       <div class="ov-dow">${dowCells}</div>
       <div class="ov-grid">${cells}</div>
-      <div class="ov-foot">${foot}</div>
     </div>`;
 }
-function wireOverview(){
-  anaInner.querySelectorAll(".ov-metric button").forEach(b=>b.onclick=()=>{ overviewMetric=b.dataset.om; renderAnalysis(); });
-  anaInner.querySelectorAll(".ov-cell[data-k]").forEach(b=>b.onclick=()=>{
-    const [yy,mm,dd]=b.dataset.k.split("-").map(Number);
-    selDate=new Date(yy,mm-1,dd);
-    setView("log");                    // 記録画面へ移動してその日を表示
-  });
+
+/* ---- 日詳細パネル（カレンダー右のメモ欄・その場で編集可） ---- */
+function selectAnaDay(k){
+  anaSelDay=k;
+  anaInner.querySelectorAll(".ov-cell.sel").forEach(el=>el.classList.remove("sel"));
+  const cell=anaInner.querySelector(`.ov-cell[data-k="${k}"]`);
+  if(cell) cell.classList.add("sel");
+  renderAnaDay();
+}
+function renderAnaDay(){
+  const card=document.getElementById("anaDayCard"); if(!card) return;
+  const k=anaSelDay;
+  if(!k){ card.innerHTML=`<h4>日の詳細</h4><div class="hint" style="margin:2px">カレンダーの日をタップすると、その日の作業とメモがここに表示されます。</div>`; return; }
+  const d=dayFromKey(k);
+  const now=Date.now();
+  const list=state.entries.filter(e=>isSameDay(new Date(e.start),d)).sort((a,b)=>a.start-b.start);
+  let total=0; list.forEach(e=>total+=((e.end||now)-e.start)/60000);
+  const saved=!!(state.savedDays&&state.savedDays[k]);
+
+  card.innerHTML=`
+    <div class="ad-head">
+      <span class="ad-date">${d.getMonth()+1}/${d.getDate()}（${DOW[d.getDay()]}）</span>
+      <span class="ad-total">${fmtDur(total)}</span>
+      ${saved?`<span class="ad-saved">日報保存済み</span>`:""}
+      <button class="ad-open" id="anaOpenDay">記録画面で開く ›</button>
+    </div>
+    <textarea class="day-memo" id="anaDayMemo" placeholder="この日の全体メモ(申し送り・TODOなど)"></textarea>
+    <div class="side-label">作業ごとのメモ</div>
+    <div id="anaDayRows"></div>`;
+
+  document.getElementById("anaOpenDay").onclick=()=>{ selDate=startOfDay(d); setView("log"); };
+
+  const dm=document.getElementById("anaDayMemo");
+  dm.value=state.dayMemos[k]||"";
+  dm.addEventListener("input",()=>{ state.dayMemos[k]=dm.value;
+    if(state.savedDays&&state.savedDays[k]) delete state.savedDays[k];
+    save(); });
+
+  const rows=document.getElementById("anaDayRows");
+  if(list.length===0){
+    rows.innerHTML=`<div class="hint" style="padding:2px 6px">この日の記録はありません。</div>`;
+    return;
+  }
+  for(const e of list){
+    const c=getClient(e.clientId); const end=e.end||now; const dur=(end-e.start)/60000;
+    const isRun=e.end===null;
+    const row=document.createElement("div"); row.className="log-row"+(isRun?" running":"");
+    row.innerHTML=`
+      <div class="log-top">
+        <span class="log-dot" style="background:${c.color}"></span>
+        <span class="log-time mono">${fmtTime(e.start)}–${e.end?fmtTime(end):"…"}</span>
+        <span class="log-cli">${esc((c.code?c.code+" ":"")+c.name)}</span>
+        <span class="log-dur mono">${fmtDurShort(dur)}</span>
+      </div>
+      <div class="log-task">${esc(e.task||"(業務未設定)")}</div>`;
+    const memo=document.createElement("textarea");
+    memo.className="log-memo"; memo.placeholder="メモを追加…"; memo.value=e.memo||"";
+    memo.addEventListener("input",()=>{ e.memo=memo.value; markDayDirty(e.start); save(); autoGrow(memo); });
+    row.querySelector(".log-top").onclick=()=>openEditEntry(e.id);
+    row.querySelector(".log-task").onclick=()=>openEditEntry(e.id);
+    row.appendChild(memo);
+    rows.appendChild(row);
+    autoGrow(memo);
+  }
 }
 function buildMonthSummaryText(d, cliRows){
   const L=[`${d.getFullYear()}年${d.getMonth()+1}月 工数（顧問先別）`];
