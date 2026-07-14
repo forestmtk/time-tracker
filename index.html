@@ -186,8 +186,10 @@
   .sum-row{display:flex;align-items:center;gap:8px;margin:5px 0}
   .sum-dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
   .sum-name{flex:0 0 42%;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .sum-bar-wrap{flex:1;height:8px;background:var(--paper);border-radius:4px;overflow:hidden}
-  .sum-bar{height:100%;border-radius:4px}
+  .sum-bar-wrap{flex:1;height:8px;background:var(--paper);border-radius:4px;overflow:hidden;display:flex}
+  .sum-bar{height:100%;border-radius:4px;flex:0 0 auto}
+  .sum-bar.travel{opacity:.32;border-radius:0 4px 4px 0;margin-left:-2px}
+  .ana-travel{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--ink-soft)}
   .sum-time{flex:0 0 auto;font-family:var(--font-mono);font-size:12px;color:var(--ink-soft);width:52px;text-align:right}
   .sum-sub{margin:8px 0 4px;font-size:11px;color:var(--figure);font-weight:600}
   .sum-toggle{display:inline-flex;border:1px solid var(--rule-strong);border-radius:8px;overflow:hidden;margin-bottom:8px}
@@ -539,9 +541,11 @@ const COLOR_UNASSIGNED = "#8A93A0"; // 顧問先なし
 
 /* 業務内容の初期候補 */
 const DEFAULT_TASKS = {
-  client:   ["申告書作成","記帳・仕訳チェック","給与計算","決算・決算見込","消費税","相談・打合せ","資料作成","メール・電話"],
+  client:   ["申告書作成","記帳・仕訳チェック","給与計算","決算・決算見込","消費税","相談・打合せ","資料作成","メール・電話","移動"],
   internal: ["試験勉強(相続税)","システム開発","事務所内業務","その他"]
 };
+/* 「移動」業務の判定（"移動" または "移動（往路）" 等の派生も拾う） */
+function isTravelTask(t){ const s=(t||"").trim(); return s==="移動"||s.startsWith("移動"); }
 
 /* ---------- 状態 ---------- */
 let state = load();
@@ -568,6 +572,7 @@ function load(){
     const s=JSON.parse(raw);
     if(!s||!s.clients||!s.entries) return defaultState();
     if(!s.tasks) s.tasks={client:[...DEFAULT_TASKS.client],internal:[...DEFAULT_TASKS.internal]};
+    if(s.tasks.client && !s.tasks.client.some(t=>(t||"").trim()==="移動")) s.tasks.client.push("移動");
     if(!s.dayMemos) s.dayMemos={};
     if(!s.savedDays) s.savedDays={};
     if(!s.resaveDays) s.resaveDays={};
@@ -1512,10 +1517,12 @@ function renderAnalysis(){
   const now=Date.now();
   const y=anaMonth.getFullYear(), mo=anaMonth.getMonth();
   const scoped=state.entries.filter(e=>{ const d=new Date(e.start); return d.getFullYear()===y&&d.getMonth()===mo; });
-  const byCli=new Map(), byTask=new Map(); let total=0; const daySet=new Set();
+  const byCli=new Map(), byCliTravel=new Map(), byTask=new Map();
+  let total=0, travelTotal=0; const daySet=new Set();
   for(const e of scoped){
     const min=((e.end||now)-e.start)/60000; total+=min;
     byCli.set(e.clientId,(byCli.get(e.clientId)||0)+min);
+    if(isTravelTask(e.task)){ travelTotal+=min; byCliTravel.set(e.clientId,(byCliTravel.get(e.clientId)||0)+min); }
     const key=e.task||"(未設定)"; byTask.set(key,(byTask.get(key)||0)+min);
     daySet.add(dateKey(new Date(e.start)));
   }
@@ -1542,6 +1549,7 @@ function renderAnalysis(){
     </div>
     <div class="ana-hero">
       <span class="ana-total">${fmtDur(total)}</span>
+      ${travelTotal>0?`<span class="ana-travel">うち移動 ${fmtDur(travelTotal)}</span>`:""}
       <span class="ana-meta">稼働 ${daySet.size}日 ・ ${scoped.length}件 ・ 顧問先 ${nCli}件
         ${cliRows.length?`<button class="sum-copy" id="anaCopy">コピー</button>`:""}</span>
     </div>
@@ -1551,11 +1559,14 @@ function renderAnalysis(){
     </div>`;
 
   if(cliRows.length){
-    html+=`<div class="ana-two"><div class="ana-card"><h4>顧問先別 <span class="sub">— タップで履歴</span></h4>`;
+    html+=`<div class="ana-two"><div class="ana-card"><h4>顧問先別 <span class="sub">— タップで履歴、薄色＝移動</span></h4>`;
     for(const [cid,min] of cliRows){ const c=getClient(cid);
-      html+=`<div class="sum-row clickable" data-cid="${cid}"><span class="sum-dot" style="background:${c.color}"></span>
+      const tr=byCliTravel.get(cid)||0;
+      const workW=((min-tr)/max*100).toFixed(1), trW=(tr/max*100).toFixed(1);
+      const tip=tr>0?` title="${esc((c.code?c.code+" ":"")+c.name)} ${fmtDur(min)}（うち移動 ${fmtDur(tr)}）"`:"";
+      html+=`<div class="sum-row clickable" data-cid="${cid}"${tip}><span class="sum-dot" style="background:${c.color}"></span>
         <span class="sum-name">${esc((c.code?c.code+" ":"")+c.name)}</span>
-        <span class="sum-bar-wrap"><span class="sum-bar" style="width:${(min/max*100).toFixed(1)}%;background:${c.color}"></span></span>
+        <span class="sum-bar-wrap"><span class="sum-bar" style="width:${workW}%;background:${c.color}"></span>${tr>0?`<span class="sum-bar travel" style="width:${trW}%;background:${c.color}"></span>`:""}</span>
         <span class="sum-time mono">${fmtDurShort(min)}</span></div>`; }
     html+=`</div><div class="ana-card"><h4>業務別</h4>`;
     for(const [t,min] of taskRows){
@@ -1723,11 +1734,21 @@ function renderAnaDay(){
   }
 }
 function buildMonthSummaryText(d, cliRows){
+  // その月の移動時間を顧問先別に集計
+  const now=Date.now(); const trMap=new Map(); let trTotal=0;
+  for(const e of state.entries){
+    const ed=new Date(e.start);
+    if(ed.getFullYear()!==d.getFullYear()||ed.getMonth()!==d.getMonth()) continue;
+    if(!isTravelTask(e.task)) continue;
+    const m=((e.end||now)-e.start)/60000;
+    trMap.set(e.clientId,(trMap.get(e.clientId)||0)+m); trTotal+=m;
+  }
   const L=[`${d.getFullYear()}年${d.getMonth()+1}月 工数（顧問先別）`];
   let total=0;
   for(const [cid,min] of cliRows){ const c=getClient(cid); total+=min;
-    L.push(`${(c.code?c.code+" ":"")+c.name} … ${fmtDur(min)}`); }
-  L.push(`合計 … ${fmtDur(total)}`);
+    const tr=trMap.get(cid)||0;
+    L.push(`${(c.code?c.code+" ":"")+c.name} … ${fmtDur(min)}${tr>0?`（うち移動 ${fmtDur(tr)}）`:""}`); }
+  L.push(`合計 … ${fmtDur(total)}${trTotal>0?`（うち移動 ${fmtDur(trTotal)}）`:""}`);
   return L.join("\n");
 }
 
@@ -1754,9 +1775,10 @@ function drawClientHistory(c){
   const rows=state.entries
     .filter(e=>e.clientId===c.id && e.start>=r.s && e.start<r.e)
     .sort((a,b)=>a.start-b.start);
-  let total=0; const daySet=new Set(); const byTask=new Map();
+  let total=0, chTravel=0; const daySet=new Set(); const byTask=new Map();
   for(const e of rows){
     const m=((e.end||now)-e.start)/60000; total+=m;
+    if(isTravelTask(e.task)) chTravel+=m;
     daySet.add(dateKey(new Date(e.start)));
     const k=e.task||"(未設定)"; byTask.set(k,(byTask.get(k)||0)+m);
   }
@@ -1772,7 +1794,7 @@ function drawClientHistory(c){
     body=`<div class="hint" style="margin:14px 6px">${r.label}の記録はありません。</div>`;
   }
   else if(chView==="sum"){
-    body=`<div class="ch-meta">${r.label} ・ 稼働 ${daySet.size}日 ・ ${rows.length}件<button class="sum-copy" id="chCopy">コピー</button></div>`;
+    body=`<div class="ch-meta">${r.label} ・ 稼働 ${daySet.size}日 ・ ${rows.length}件${chTravel>0?` ・ うち移動 ${fmtDur(chTravel)}`:""}<button class="sum-copy" id="chCopy">コピー</button></div>`;
     const trs=[...byTask.entries()].sort((a,b)=>b[1]-a[1]);
     const tmax=Math.max(1,...trs.map(x=>x[1]));
     body+=`<div class="sum-sub" style="margin:6px 6px 4px">業務別</div>`;
@@ -1816,7 +1838,7 @@ function drawClientHistory(c){
     const trs=[...byTask.entries()].sort((a,b)=>b[1]-a[1]);
     const L=[`${(c.code?c.code+" ":"")+c.name} 工数（${r.label}）`];
     trs.forEach(([t,m])=>L.push(`${t} … ${fmtDur(m)}`));
-    L.push(`合計 … ${fmtDur(total)}（稼働${daySet.size}日・${rows.length}件）`);
+    L.push(`合計 … ${fmtDur(total)}（稼働${daySet.size}日・${rows.length}件${chTravel>0?`・うち移動 ${fmtDur(chTravel)}`:""}）`);
     copyText(L.join("\n"),null);
   };
 }
@@ -1928,6 +1950,7 @@ function importData(file){
     const nCli=s.clients.filter(c=>c.kind==="client").length;
     if(!confirm(`このバックアップ(顧問先${nCli}件・記録${s.entries.length}件)で現在のデータを置き換えます。よろしいですか?`)) return;
     if(!s.tasks) s.tasks={client:[...DEFAULT_TASKS.client],internal:[...DEFAULT_TASKS.internal]};
+    if(s.tasks.client && !s.tasks.client.some(t=>(t||"").trim()==="移動")) s.tasks.client.push("移動");
     if(!s.dayMemos) s.dayMemos={};
     if(!s.savedDays) s.savedDays={};
     if(!s.resaveDays) s.resaveDays={};
