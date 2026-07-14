@@ -333,6 +333,7 @@
   .fs-row .lk:hover{color:var(--ink)}
 
   /* ---------- 自動保存バナー ---------- */
+  .banner[hidden]{display:none}
   .banner{
     position:fixed;left:12px;right:12px;bottom:calc(94px + var(--safe-b));z-index:66;
     display:flex;align-items:center;gap:10px;padding:11px 10px 11px 14px;
@@ -803,14 +804,15 @@ function updateElapsed(){
 ============================================================ */
 function stopRunning(){
   const run=runningEntry();
-  if(run){ run.end=Date.now(); save(); }
+  if(run){ run.end=Date.now(); markDayDirty(run.start); save(); }
   renderAll();
 }
 function startTracking(clientId,task){
   const now=Date.now();
   const run=runningEntry();
-  if(run) run.end=now;               // 前の記録を締める
+  if(run){ run.end=now; markDayDirty(run.start); }   // 前の記録を締める
   state.entries.push({id:uid(),clientId,task,start:now,end:null,memo:""});
+  markDayDirty(now);
   save();
   selDate=startOfDay(new Date());
   renderAll(); scrollToRelevant();
@@ -927,6 +929,7 @@ function openStaleFix(run){
   document.getElementById("stKeep").onclick=()=>{ closeSheet(); };
   document.getElementById("stDel").onclick=()=>{
     if(!confirm("この計測記録を削除します。よろしいですか?")) return;
+    markDayDirty(run.start);
     state.entries=state.entries.filter(x=>x.id!==run.id); save(); closeSheet(); renderAll(); toast("削除しました");
   };
   openSheet();
@@ -1122,7 +1125,7 @@ function openEditEntry(id){
     markDayDirty(e.start);
     save(); closeSheet(); renderAll(); toast("修正を保存しました");
   };
-  const stopEl=document.getElementById("edStop"); if(stopEl) stopEl.onclick=()=>{ e.end=Date.now(); save(); closeSheet(); renderAll(); toast("計測を停止しました"); };
+  const stopEl=document.getElementById("edStop"); if(stopEl) stopEl.onclick=()=>{ e.end=Date.now(); markDayDirty(e.start); save(); closeSheet(); renderAll(); toast("計測を停止しました"); };
   const dupEl=document.getElementById("edDup"); if(dupEl) dupEl.onclick=()=>{
     const dur=(e.end||Date.now())-e.start;                 // 同じ長さ
     const ns=e.end||Date.now(), ne=ns+dur;                 // 直後に配置
@@ -1156,7 +1159,9 @@ function renderSide(){
 
   const dm=document.getElementById("dayMemo");
   dm.value=state.dayMemos[key]||"";
-  dm.addEventListener("input",()=>{ state.dayMemos[key]=dm.value; save(); });
+  dm.addEventListener("input",()=>{ state.dayMemos[key]=dm.value;
+    if(state.savedDays&&state.savedDays[key]) delete state.savedDays[key];   // 日報の所感欄が変わる→再保存対象に
+    save(); });
 
   const rows=document.getElementById("logRows");
   if(dayEntries.length===0){
@@ -1178,7 +1183,7 @@ function renderSide(){
       <div class="log-task">${esc(e.task||"(業務未設定)")}</div>`;
     const memo=document.createElement("textarea");
     memo.className="log-memo"; memo.placeholder="メモを追加…"; memo.value=e.memo||"";
-    memo.addEventListener("input",()=>{ e.memo=memo.value; save(); autoGrow(memo); });
+    memo.addEventListener("input",()=>{ e.memo=memo.value; markDayDirty(e.start); save(); autoGrow(memo); });
     row.querySelector(".log-top").onclick=()=>openEditEntry(e.id);
     row.querySelector(".log-task").onclick=()=>openEditEntry(e.id);
     row.appendChild(memo);
@@ -1376,19 +1381,25 @@ async function autoSaveYesterday(){
   if(!dir) return;                                      // 保存先未設定なら何もしない（初回は手動保存で設定）
   let perm="prompt"; try{ perm=await dir.queryPermission({mode:"readwrite"}); }catch(e){}
   if(perm==="granted"){                                 // 許可が残っていれば完全自動
-    let n=0;
-    for(const k of days){ try{ await writeReportToDir(dir,dayFromKey(k)); state.savedDays[k]=true; n++; }catch(e){} }
-    if(n){ save(); toast(n>1?`前日までの日報を${n}日分保存しました`:"前日の日報を保存しました"); }
+    let n=0; const done=[];
+    for(const k of days){ try{ await writeReportToDir(dir,dayFromKey(k)); state.savedDays[k]=true; n++; done.push(k); }catch(e){} }
+    if(n){ save(); toast(n>1?`未保存の日報を${n}日分保存しました（${fmtDayList(done)}）`:`${fmtDayList(done)} の日報を保存しました`); }
   }else{
     showSaveBanner(days, dir);                          // 許可にタップが要る → 1タップ保存を促す
   }
 }
 function dayFromKey(k){ const [y,mo,da]=k.split("-").map(Number); return new Date(y,mo-1,da); }
+function fmtDayList(days){
+  const f=k=>{ const [,m,d]=k.split("-").map(Number); return `${m}/${d}`; };
+  if(days.length<=4) return days.map(f).join("・");
+  return days.slice(0,3).map(f).join("・")+` ほか${days.length-3}日`;
+}
 function showSaveBanner(days, dir){
   const b=document.getElementById("banner"); if(!b) return;
   const txt=document.getElementById("bnTxt");
   const setLabel=()=>{ txt.textContent = days.length>1
-      ? `未保存の日報が${days.length}日分あります` : `前日の日報をObsidianに保存できます`; };
+      ? `未保存の日報が${days.length}日分あります（${fmtDayList(days)}）`
+      : `${fmtDayList(days)} の日報をObsidianに保存できます`; };
   setLabel();
   b.hidden=false;
   const go=document.getElementById("bnGo");
@@ -1401,11 +1412,11 @@ function showSaveBanner(days, dir){
       let ok=(await d.queryPermission({mode:"readwrite"}))==="granted";
       if(!ok) ok=(await d.requestPermission({mode:"readwrite"}))==="granted";
       if(!ok){ txt.textContent="許可されませんでした。もう一度「保存」を押してください"; go.disabled=false; return; }
-      let n=0, fail=0;
-      for(const k of days){ try{ await writeReportToDir(d,dayFromKey(k)); state.savedDays[k]=true; n++; }catch(e){ fail++; } }
+      let n=0; const failed=[];
+      for(const k of days){ try{ await writeReportToDir(d,dayFromKey(k)); state.savedDays[k]=true; n++; }catch(e){ failed.push(k); } }
       save();
-      if(fail===0){ b.hidden=true; toast(n>1?`${n}日分を保存しました`:"保存しました"); }
-      else{ txt.textContent=`${n}日分保存／${fail}日分失敗`; go.disabled=false; }
+      if(failed.length===0){ txt.textContent="保存しました"; b.hidden=true; toast(n>1?`${n}日分を保存しました`:`${fmtDayList(days)} を保存しました`); }
+      else{ txt.textContent=`${n}日分保存／失敗: ${fmtDayList(failed)}（もう一度お試しください）`; go.disabled=false; }
     }catch(e){
       txt.textContent="保存できませんでした。もう一度お試しください"; go.disabled=false;
     }
