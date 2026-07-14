@@ -401,9 +401,12 @@
   .ov-dow span{text-align:center;font-size:10.5px;font-weight:700;color:var(--figure)}
   .ov-dow span.sun{color:var(--shu)}.ov-dow span.sat{color:#3E6D9C}
   .ov-grid{display:grid;grid-template-columns:repeat(7,1fr) minmax(46px,.66fr);gap:4px}
-  .ov-cell{position:relative;height:104px;border-radius:8px;border:1px solid var(--rule);overflow:hidden;background:var(--paper);padding:5px 6px;display:flex;flex-direction:column;align-items:stretch;gap:2px;text-align:left}
+  .ov-cell{position:relative;height:104px;border-radius:8px;border:1px solid var(--rule-strong);overflow:hidden;background:var(--paper);padding:5px 6px;display:flex;flex-direction:column;align-items:stretch;gap:2px;text-align:left}
+  .ov-cell>*{position:relative;z-index:1}
+  .ov-heat{position:absolute;inset:0;z-index:0!important}
   @media(max-width:900px){.ov-cell{height:92px;padding:4px 5px}}
   .ov-cell:hover{border-color:var(--figure)}
+  .ov-cell.empty{border:1px dashed var(--rule);background:transparent}
   .ov-cell.blank{border:none;background:transparent;pointer-events:none}
   .ov-cell.today{outline:1.6px solid var(--shu);outline-offset:-1.6px}
   .ov-cell.sel{border-color:var(--ink);box-shadow:0 0 0 1.4px var(--ink) inset}
@@ -416,15 +419,17 @@
   .ov-sdot{width:6px;height:6px;border-radius:50%}
   .ov-tot{font-family:var(--font-mono);font-size:15.5px;font-weight:700;color:var(--ink);line-height:1.15}
   @media(max-width:900px){.ov-tot{font-size:13px}}
-  .ov-rows{display:flex;flex-direction:column;gap:3px;margin-top:1px;min-height:0}
-  .ov-cr{display:flex;align-items:center;gap:4px;height:10px}
+  .ov-rows{display:flex;flex-direction:column;gap:3px;margin-top:2px;min-height:0}
+  .ov-cr{display:flex;align-items:center;gap:4px;height:11px}
   .ov-cc{flex:0 0 26px;font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-soft);white-space:nowrap;overflow:hidden;line-height:1}
-  .ov-cb{flex:1;height:7px;border-radius:3px;background:var(--rule);overflow:hidden}
-  .ov-cb b{display:block;height:100%;border-radius:3px}
-  .ov-more{font-size:9px;color:var(--figure);line-height:1;margin-top:-1px}
-  .ov-wk{border-radius:8px;border:1px dashed var(--rule);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+  .ov-cb{flex:1;height:8px;border-radius:4px;background:rgba(30,42,56,.08);overflow:hidden}
+  .ov-cb b{display:block;height:100%;border-radius:4px}
+  .ov-more{font-size:9px;color:var(--ink-soft);line-height:1;margin-top:-1px}
+  .ov-wk{border-radius:8px;border:1px solid var(--rule);background:var(--paper-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0 7px}
   .ov-wk b{font-family:var(--font-mono);font-size:12.5px;font-weight:700;color:var(--ink-soft)}
   .ov-wk .dim{color:var(--rule-strong);font-size:12px}
+  .ov-wkbar{width:100%;height:5px;border-radius:3px;background:rgba(30,42,56,.08);overflow:hidden}
+  .ov-wkbar b{display:block;height:100%;border-radius:3px;background:var(--ink-soft)}
   .ov-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 2px 2px;font-size:11.5px;color:var(--figure)}
   .ov-foot .dotc{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px;vertical-align:baseline}
 
@@ -1581,10 +1586,10 @@ function drawOverviewHTML(y,mo){
   const dim=new Date(y,mo+1,0).getDate();
   const todayKey=dateKey(new Date());
 
-  // 棒のスケール: フル幅 ＝ 8時間（月内にそれ以上の塊があればそこまで拡張）
-  let maxSeg=0;
-  data.forEach(o=>o.byClient.forEach(mn=>{ if(mn>maxSeg)maxSeg=mn; }));
-  const full=Math.max(480,maxSeg);
+  // スケール類（すべて月内基準）
+  let maxSeg=0, maxDay=0;
+  data.forEach(o=>{ if(o.min>maxDay)maxDay=o.min; o.byClient.forEach(mn=>{ if(mn>maxSeg)maxSeg=mn; }); });
+  const full=Math.max(120,maxSeg);   // 棒のフル幅＝月内最大の塊（下限2hで暴れ防止）
 
   const dowCells=["日","月","火","水","木","金","土"]
     .map((w,i)=>`<span class="${i===0?"sun":i===6?"sat":""}">${w}</span>`).join("")
@@ -1596,15 +1601,23 @@ function drawOverviewHTML(y,mo){
   for(let d=1;d<=dim;d++) slots.push({d,k:dateKeyOf(y,mo,d),o:data.get(d)});
   while(slots.length%7) slots.push(null);
 
-  let grid="";
+  // 1パス目: 週合計
+  const wkMins=[];
   for(let ws=0;ws<slots.length;ws+=7){
-    let wkMin=0;
+    let m=0; for(let i=0;i<7;i++){ const s=slots[ws+i]; if(s&&s.o) m+=s.o.min; }
+    wkMins.push(m);
+  }
+  const maxWeek=Math.max(1,...wkMins);
+
+  // 2パス目: 描画
+  let grid="";
+  for(let ws=0, w=0; ws<slots.length; ws+=7, w++){
     for(let i=0;i<7;i++){
       const s=slots[ws+i];
       if(!s){ grid+=`<div class="ov-cell blank"></div>`; continue; }
       const {d,k,o}=s;
-      if(o) wkMin+=o.min;
-      const cls=["ov-cell"]; if(k===anaSelDay)cls.push("sel"); if(k===todayKey)cls.push("today");
+      const cls=["ov-cell"]; if(!o)cls.push("empty");
+      if(k===anaSelDay)cls.push("sel"); if(k===todayKey)cls.push("today");
       const numCls=(i===0?"sun":i===6?"sat":"")+(o?"":" dim");
       let inner=""; let title=`${mo+1}/${d} 記録なし`;
       if(o){
@@ -1612,11 +1625,13 @@ function drawOverviewHTML(y,mo){
         const saved=!!(state.savedDays&&state.savedDays[k]);
         const isPast=k<todayKey;
         const sdot = isPast||saved ? `<span class="ov-sdot" style="background:${saved?CAL_SAVED_COLOR:"var(--shu)"}"></span>` : "";
+        const heatA=(0.05+0.17*(o.min/Math.max(1,maxDay))).toFixed(3);   // 0.05〜0.22の控えめな墨
         const rows=segs.slice(0,3).map(([cid,mn])=>{ const c=getClient(cid);
-          return `<span class="ov-cr"><i class="ov-cc">${esc(c.code||c.name.slice(0,3))}</i><i class="ov-cb"><b style="width:${Math.min(100,mn/full*100).toFixed(1)}%;background:${c.color}"></b></i></span>`;
+          return `<span class="ov-cr"><i class="ov-cc" style="color:${c.color}">${esc(c.code||c.name.slice(0,3))}</i><i class="ov-cb"><b style="width:${Math.min(100,mn/full*100).toFixed(1)}%;background:${c.color}"></b></i></span>`;
         }).join("");
         const more=segs.length>3?`<span class="ov-more">ほか${segs.length-3}件</span>`:"";
-        inner=`<span class="ov-r1"><span class="ov-num ${numCls}">${d}</span><span class="ov-st">${sdot}<span class="ov-cnt">${o.count}</span></span></span>`
+        inner=`<span class="ov-heat" style="background:rgba(30,42,56,${heatA})"></span>`
+            +`<span class="ov-r1"><span class="ov-num ${numCls}">${d}</span><span class="ov-st">${sdot}<span class="ov-cnt">${o.count}</span></span></span>`
             +`<span class="ov-tot">${fmtDurShort(o.min)}</span>`
             +`<span class="ov-rows">${rows}${more}</span>`;
         title=`${mo+1}/${d} ${fmtDur(o.min)}・${o.count}件${saved?"・日報保存済み":(isPast?"・日報未保存":"")}`
@@ -1626,7 +1641,10 @@ function drawOverviewHTML(y,mo){
       }
       grid+=`<button class="${cls.join(" ")}" data-k="${k}" title="${title}">${inner}</button>`;
     }
-    grid+=`<div class="ov-wk">${wkMin?`<b>${fmtDurShort(wkMin)}</b>`:`<span class="dim">–</span>`}</div>`;
+    const wm=wkMins[w];
+    grid+=`<div class="ov-wk">${wm
+      ?`<b>${fmtDurShort(wm)}</b><span class="ov-wkbar"><b style="width:${(wm/maxWeek*100).toFixed(1)}%"></b></span>`
+      :`<span class="dim">–</span>`}</div>`;
   }
 
   return `<div class="ov">
@@ -1635,7 +1653,7 @@ function drawOverviewHTML(y,mo){
       <div class="ov-foot">
         <span><span class="dotc" style="background:${CAL_SAVED_COLOR}"></span>日報保存済み</span>
         <span><span class="dotc" style="background:var(--shu)"></span>未保存</span>
-        <span>／ 棒＝顧問先別の時間（フル幅≈8時間）、右端＝週計、ホバーで内訳</span>
+        <span>／ 棒＝顧問先別の時間、濃さ＝日の合計、右端＝週計（ホバーで内訳）</span>
       </div>
     </div>`;
 }
