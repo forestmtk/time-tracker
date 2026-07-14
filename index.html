@@ -153,7 +153,7 @@
   .icon-btn.active:hover{color:#fff}
   .analysis{display:none}
   body.mode-analysis .analysis{display:block;flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px 16px calc(18px + var(--safe-b))}
-  .ana-inner{max-width:1100px;margin:0 auto}
+  .ana-inner{max-width:1440px;margin:0 auto}
   .ana-nav{display:flex;align-items:center;gap:6px}
   .ana-nav button{width:34px;height:34px;border-radius:9px;border:1px solid var(--rule);background:var(--paper-2);color:var(--ink-soft);font-size:18px;display:grid;place-items:center}
   .ana-nav button:hover{border-color:var(--figure);color:var(--ink)}
@@ -165,7 +165,7 @@
   .ana-card{background:var(--paper-2);border:1px solid var(--rule);border-radius:14px;padding:13px 15px 12px;margin:13px 0 0;box-shadow:var(--shadow)}
   .ana-card h4{margin:0 0 10px;font-size:12px;font-weight:700;color:var(--ink-soft);letter-spacing:.05em}
   .ana-card h4 .sub{font-weight:400;color:var(--figure)}
-  .ana-main{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:13px;align-items:start}
+  .ana-main{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(0,1fr);gap:15px;align-items:start}
   .ana-two{display:grid;grid-template-columns:1fr 1fr;gap:13px;align-items:start}
   .ana-day-card{position:sticky;top:0}
   @media(max-width:900px){
@@ -403,30 +403,30 @@
   .ov-dow span{text-align:center;font-size:10.5px;font-weight:700;color:var(--figure)}
   .ov-dow span.sun{color:var(--shu)}.ov-dow span.sat{color:#3E6D9C}
   .ov-grid{display:grid;grid-template-columns:repeat(7,1fr) minmax(46px,.66fr);gap:4px}
-  .ov-cell{position:relative;height:104px;border-radius:8px;border:1px solid var(--rule-strong);overflow:hidden;background:var(--paper);padding:5px 6px;display:flex;flex-direction:column;align-items:stretch;gap:2px;text-align:left}
+  .ov-cell{position:relative;height:126px;border-radius:9px;border:1px solid var(--rule-strong);overflow:hidden;background:var(--paper);padding:6px 8px;display:flex;flex-direction:column;align-items:stretch;gap:2px;text-align:left}
   .ov-cell>*{position:relative;z-index:1}
   .ov-heat{position:absolute;inset:0;z-index:0!important}
-  @media(max-width:900px){.ov-cell{height:92px;padding:4px 5px}}
+  @media(max-width:900px){.ov-cell{height:106px;padding:5px 6px}}
   .ov-cell:hover{border-color:var(--figure)}
   .ov-cell.empty{border:1px dashed var(--rule);background:transparent}
   .ov-cell.blank{border:none;background:transparent;pointer-events:none}
   .ov-cell.today{outline:1.6px solid var(--shu);outline-offset:-1.6px}
   .ov-cell.sel{border-color:var(--ink);box-shadow:0 0 0 1.4px var(--ink) inset}
   .ov-r1{display:flex;align-items:center;justify-content:space-between;line-height:1}
-  .ov-num{font-family:var(--font-mono);font-size:11.5px;font-weight:600;color:var(--ink)}
+  .ov-num{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--ink)}
   .ov-num.sun{color:var(--shu)}.ov-num.sat{color:#3E6D9C}
   .ov-num.dim{color:var(--figure)}
   .ov-st{display:flex;align-items:center;gap:4px}
-  .ov-cnt{font-family:var(--font-mono);font-size:10.5px;font-weight:600;color:var(--ink-soft)}
+  .ov-cnt{font-family:var(--font-mono);font-size:11.5px;font-weight:600;color:var(--ink-soft)}
   .ov-sdot{width:6px;height:6px;border-radius:50%}
-  .ov-tot{font-family:var(--font-mono);font-size:15.5px;font-weight:700;color:var(--ink);line-height:1.15}
-  @media(max-width:900px){.ov-tot{font-size:13px}}
+  .ov-tot{font-family:var(--font-mono);font-size:18.5px;font-weight:700;color:var(--ink);line-height:1.12}
+  @media(max-width:900px){.ov-tot{font-size:15px}}
   .ov-rows{display:flex;flex-direction:column;gap:3px;margin-top:2px;min-height:0}
-  .ov-cr{display:flex;align-items:center;gap:4px;height:11px}
-  .ov-cc{flex:0 0 26px;font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-soft);white-space:nowrap;overflow:hidden;line-height:1}
-  .ov-cb{flex:1;height:8px;border-radius:4px;background:rgba(30,42,56,.08);overflow:hidden}
-  .ov-cb b{display:block;height:100%;border-radius:4px}
-  .ov-more{font-size:9px;color:var(--ink-soft);line-height:1;margin-top:-1px}
+  .ov-cr{display:flex;align-items:center;gap:5px;height:13px}
+  .ov-cc{flex:0 0 31px;font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--ink-soft);white-space:nowrap;overflow:hidden;line-height:1}
+  .ov-cb{flex:1;height:10px;border-radius:5px;background:rgba(30,42,56,.12);overflow:hidden}
+  .ov-cb b{display:block;height:100%;border-radius:5px}
+  .ov-more{font-size:9.5px;color:var(--ink-soft);line-height:1;margin-top:0}
   .ov-wk{border-radius:8px;border:1px solid var(--rule);background:var(--paper-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0 7px}
   .ov-wk b{font-family:var(--font-mono);font-size:12.5px;font-weight:700;color:var(--ink-soft)}
   .ov-wk .dim{color:var(--rule-strong);font-size:12px}
@@ -1636,11 +1636,11 @@ function drawOverviewHTML(y,mo){
         const saved=!!(state.savedDays&&state.savedDays[k]);
         const isPast=k<todayKey;
         const sdot = isPast||saved ? `<span class="ov-sdot" style="background:${saved?CAL_SAVED_COLOR:"var(--shu)"}"></span>` : "";
-        const heatA=(0.05+0.17*(o.min/Math.max(1,maxDay))).toFixed(3);   // 0.05〜0.22の控えめな墨
-        const rows=segs.slice(0,3).map(([cid,mn])=>{ const c=getClient(cid);
+        const heatA=(0.06+0.26*(o.min/Math.max(1,maxDay))).toFixed(3);   // 0.06〜0.32 少し起こした墨
+        const rows=segs.slice(0,4).map(([cid,mn])=>{ const c=getClient(cid);
           return `<span class="ov-cr"><i class="ov-cc" style="color:${c.color}">${esc(c.code||c.name.slice(0,3))}</i><i class="ov-cb"><b style="width:${Math.min(100,mn/full*100).toFixed(1)}%;background:${c.color}"></b></i></span>`;
         }).join("");
-        const more=segs.length>3?`<span class="ov-more">ほか${segs.length-3}件</span>`:"";
+        const more=segs.length>4?`<span class="ov-more">ほか${segs.length-4}件</span>`:"";
         inner=`<span class="ov-heat" style="background:rgba(30,42,56,${heatA})"></span>`
             +`<span class="ov-r1"><span class="ov-num ${numCls}">${d}</span><span class="ov-st">${sdot}<span class="ov-cnt">${o.count}</span></span></span>`
             +`<span class="ov-tot">${fmtDurShort(o.min)}</span>`
