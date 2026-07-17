@@ -116,6 +116,11 @@
     border:1px solid rgba(255,255,255,.18);
   }
   .block:hover{filter:brightness(1.05)}
+  .block:not(.running){cursor:grab}
+  .block.dragging{cursor:grabbing;z-index:6;filter:brightness(1.08);box-shadow:0 8px 20px rgba(0,0,0,.28);transition:none}
+  .block .rz{position:absolute;left:0;right:0;height:7px;z-index:3;cursor:ns-resize}
+  .block .rz.t{top:0}
+  .block .rz.b{bottom:0}
   .block .b-client{font-size:12px;font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .block .b-task{font-size:11px;opacity:.92;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .block .b-dur{font-size:10px;opacity:.8;font-family:var(--font-mono)}
@@ -696,7 +701,12 @@ function renderTimeline(){
     el.innerHTML=`<div class="b-client">${esc(cliLabel)}</div>`+
                  (h>34?`<div class="b-task">${esc(e.task||"")}</div>`:"")+
                  (h>50?`<div class="b-dur mono">${fmtTime(e.start)}–${e.end?fmtTime(end):"進行中"} · ${fmtDurShort(durMin)}</div>`:"");
-    el.onclick=()=>openEditEntry(e.id);
+    el.onclick=()=>{ if(suppressBlockClick) return; openEditEntry(e.id); };
+    if(h>=28){                                   // 細いブロックは端をつかめないので移動のみ
+      const t=document.createElement("div"); t.className="rz t"; el.appendChild(t);
+      if(e.end!==null){ const b=document.createElement("div"); b.className="rz b"; el.appendChild(b); }
+    }
+    el.addEventListener("mousedown",ev=>onBlockDown(ev,e,el));
     grid.appendChild(el);
   }
 
@@ -1052,6 +1062,62 @@ function yToMs(y){
   min=Math.round(min/5)*5;            // 5分刻みにスナップ
   return viewTop+min*60000;
 }
+/* ---- ブロックのドラッグ編集（中央=移動 / 上下端=伸縮） ---- */
+let dragEdit=null, suppressBlockClick=false;
+const DRAG_MIN_MS=5*60000;          // 最短5分
+function viewRange(){
+  const vt=startOfDay(selDate).getTime()+VIEW_START_H*3600000;
+  return [vt, vt+(VIEW_END_H-VIEW_START_H)*3600000];
+}
+function paintDrag(d){
+  const [vt]=viewRange();
+  const end=d.e.end||Date.now();
+  d.el.style.top=Math.max(0,(d.e.start-vt)/60000*PX_MIN)+"px";
+  d.el.style.height=Math.max(22,(end-d.e.start)/60000*PX_MIN)+"px";
+  const du=d.el.querySelector(".b-dur");
+  if(du) du.textContent=`${fmtTime(d.e.start)}–${d.e.end?fmtTime(end):"進行中"} · ${fmtDurShort((end-d.e.start)/60000)}`;
+}
+function onBlockDown(ev,e,el){
+  if(ev.button!==0) return;
+  const hz=ev.target.closest(".rz");
+  let mode=hz ? (hz.classList.contains("t")?"rs":"re") : "move";
+  if(e.end===null && mode!=="rs") return;        // 進行中は開始側のみ
+  ev.preventDefault();
+  dragEdit={e,mode,el,y0:ev.clientY,s0:e.start,e0:e.end,moved:false};
+  el.classList.add("dragging");
+}
+window.addEventListener("mousemove",ev=>{
+  if(!dragEdit) return;
+  const d=dragEdit, dy=ev.clientY-d.y0;
+  if(!d.moved && Math.abs(dy)<4) return;         // 微動はクリック扱い
+  d.moved=true;
+  const dm=Math.round(dy/PX_MIN/5)*5*60000;      // 5分スナップ
+  const [vt,vb]=viewRange();
+  if(d.mode==="move"){
+    let ns=d.s0+dm, ne=d.e0+dm;
+    if(ns<vt){ ne+=vt-ns; ns=vt; }
+    if(ne>vb){ ns-=ne-vb; ne=vb; }
+    d.e.start=ns; d.e.end=ne;
+  }else if(d.mode==="rs"){
+    const cap=(d.e0===null?Date.now():d.e0)-DRAG_MIN_MS;
+    d.e.start=Math.min(cap,Math.max(vt,d.s0+dm));
+  }else{
+    d.e.end=Math.max(d.s0+DRAG_MIN_MS,Math.min(vb,d.e0+dm));
+  }
+  paintDrag(d);
+});
+window.addEventListener("mouseup",()=>{
+  if(!dragEdit) return;
+  const d=dragEdit; dragEdit=null;
+  d.el.classList.remove("dragging");
+  if(!d.moved) return;                           // 動いていなければクリック＝編集を開く
+  suppressBlockClick=true; setTimeout(()=>suppressBlockClick=false,60);
+  markKeyDirty(dateKey(new Date(d.s0)));         // 元の日
+  markDayDirty(d.e.start);                       // 移動後の日
+  save(); renderAll();
+  toast(d.mode==="move"?"時間帯を移動しました":"時間を変更しました");
+});
+
 grid.addEventListener("mousedown",ev=>{
   if(ev.button!==0) return;
   if(ev.target.closest(".block")) return;   // 既存ブロック上は対象外
@@ -2052,6 +2118,7 @@ setInterval(()=>{
   updateElapsed();
   if(appView==="analysis") return;               // ふりかえり表示中は毎秒再描画しない（トグル操作を守る）
   if(!isSameDay(new Date(),selDate)) return;
+  if(dragSel||dragEdit) return;                  // ドラッグ中は再描画しない（掴んでいる要素・ghostが消えるのを防ぐ）
   renderTimeline();                              // タイムライン(入力欄なし)は再描画OK
   // 右パネルはソフト更新のみ
   const now=Date.now();
