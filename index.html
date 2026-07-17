@@ -469,7 +469,16 @@
 
   /* ---------- ふりかえり：月間カレンダー（合計＋顧問先別ミニ棒グラフ＋週計） ---------- */
   .ov{margin-top:2px}
-  .ov-dow{display:grid;grid-template-columns:repeat(7,1fr) minmax(46px,.66fr);gap:4px;margin-bottom:4px}
+  .ov-sticky{
+    position:sticky;top:0;z-index:5;background:var(--paper-2);
+    padding:2px 0 0;margin-bottom:4px;border-bottom:1px solid var(--rule-strong);
+  }
+  .ov-mon{
+    font-family:var(--font-disp);font-size:15px;font-weight:700;color:var(--ink);
+    letter-spacing:.02em;padding:2px 2px 6px;display:flex;align-items:baseline;gap:8px;
+  }
+  .ov-mon .sub{font-family:var(--font-ui);font-size:10.5px;font-weight:600;color:var(--figure);letter-spacing:.05em}
+  .ov-dow{display:grid;grid-template-columns:repeat(7,1fr) minmax(46px,.66fr);gap:4px;padding-bottom:5px}
   .ov-dow span{text-align:center;font-size:10.5px;font-weight:700;color:var(--figure)}
   .ov-dow span.sun{color:var(--shu)}.ov-dow span.sat{color:#3E6D9C}
   .ov-grid{display:grid;grid-template-columns:repeat(7,1fr) minmax(46px,.66fr);gap:4px}
@@ -482,6 +491,11 @@
   .ov-cell.blank{border:none;background:transparent;pointer-events:none}
   .ov-cell.today{outline:1.6px solid var(--shu);outline-offset:-1.6px}
   .ov-cell.sel{border-color:var(--ink);box-shadow:0 0 0 1.4px var(--ink) inset}
+  /* 土日の列（.empty/.blank より後ろに置いて、記録のない週末にも色を効かせる） */
+  .ov-cell.sun{background:rgba(220,74,46,.05)}
+  .ov-cell.sat{background:rgba(62,109,156,.055)}
+  .ov-cell.blank.sun{background:rgba(220,74,46,.028)}
+  .ov-cell.blank.sat{background:rgba(62,109,156,.032)}
   .ov-r1{display:flex;align-items:center;justify-content:space-between;line-height:1}
   .ov-num{font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--ink);line-height:1.1}
   .ov-num.sun{color:var(--shu)}.ov-num.sat{color:#3E6D9C}
@@ -1736,7 +1750,7 @@ function renderAnalysis(){
         ${cliRows.length?`<button class="sum-copy" id="anaCopy">コピー</button>`:""}</span>
     </div>
     <div class="ana-main">
-      <div class="ana-card"><h4>月間カレンダー</h4>${drawOverviewHTML(y,mo)}</div>
+      <div class="ana-card">${drawOverviewHTML(y,mo)}</div>
       <div class="ana-card ana-day-card" id="anaDayCard"></div>
     </div>`;
 
@@ -1807,9 +1821,10 @@ function drawOverviewHTML(y,mo){
   for(let ws=0, w=0; ws<slots.length; ws+=7, w++){
     for(let i=0;i<7;i++){
       const s=slots[ws+i];
-      if(!s){ grid+=`<div class="ov-cell blank"></div>`; continue; }
+      if(!s){ grid+=`<div class="ov-cell blank${i===0?" sun":i===6?" sat":""}"></div>`; continue; }
       const {d,k,o}=s;
       const cls=["ov-cell"]; if(!o)cls.push("empty");
+      if(i===0)cls.push("sun"); else if(i===6)cls.push("sat");
       if(k===anaSelDay)cls.push("sel"); if(k===todayKey)cls.push("today");
       const numCls=(i===0?"sun":i===6?"sat":"")+(o?"":" dim");
       let inner=""; let title=`${mo+1}/${d} 記録なし`;
@@ -1841,7 +1856,10 @@ function drawOverviewHTML(y,mo){
   }
 
   return `<div class="ov">
-      <div class="ov-dow">${dowCells}</div>
+      <div class="ov-sticky">
+        <div class="ov-mon">${y}年${mo+1}月<span class="sub">月間カレンダー</span></div>
+        <div class="ov-dow">${dowCells}</div>
+      </div>
       <div class="ov-grid">${grid}</div>
       <div class="ov-foot">
         <span><span class="dotc" style="background:${CAL_SAVED_COLOR}"></span>日報保存済み</span>
