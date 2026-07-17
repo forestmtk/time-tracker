@@ -164,8 +164,60 @@
   .ana-head-title{font-family:var(--font-disp);font-size:22px;font-weight:600;letter-spacing:.02em}
   .icon-btn.active{background:var(--ink);border-color:var(--ink);color:#fff}
   .icon-btn.active:hover{color:#fff}
-  .analysis{display:none}
-  body.mode-analysis .analysis{display:block;flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px 16px calc(18px + var(--safe-b))}
+  .analysis{display:none}  body.mode-analysis .analysis{display:block;flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px 16px calc(18px + var(--safe-b))}
+
+  /* ---------- メモ（第3のビュー：メモを主役にした横断閲覧） ---------- */
+  .memo{display:none}
+  body.mode-memo .memo{display:block;flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px 16px calc(18px + var(--safe-b))}
+  body.mode-memo .work{display:none}
+  body.mode-memo .today-btn,body.mode-memo .nav,body.mode-memo .date-jump{display:none}
+  .memo-inner{max-width:1000px;margin:0 auto}
+  .me-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}
+  .me-search{
+    flex:1 1 260px;min-width:0;padding:9px 12px;border-radius:10px;
+    border:1px solid var(--rule-strong);background:var(--paper-2);
+    font-size:13.5px;font-family:var(--font-ui);color:var(--ink);
+  }
+  .me-search:focus{border-color:var(--figure);outline:none}
+  .me-sel{
+    padding:8px 10px;border-radius:10px;border:1px solid var(--rule-strong);
+    background:var(--paper-2);font-size:12.5px;color:var(--ink-soft);font-family:var(--font-ui);max-width:190px;
+  }
+  .me-chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+  .me-chip{padding:6px 12px;border-radius:9px;border:1px solid var(--rule-strong);background:var(--paper-2);font-size:12px;font-weight:600;color:var(--ink-soft);cursor:pointer}
+  .me-chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .me-seg{display:inline-flex;border:1px solid var(--rule-strong);border-radius:9px;overflow:hidden}
+  .me-seg button{padding:6px 14px;font-size:12px;font-weight:700;color:var(--figure);background:var(--paper-2);cursor:pointer}
+  .me-seg button.on{background:var(--ink);color:#fff}
+  .me-meta{font-size:11.5px;color:var(--ink-soft);margin:2px 2px 10px;display:flex;align-items:center;gap:10px}
+  .me-copy{margin-left:auto;padding:5px 11px;border-radius:8px;border:1px solid var(--rule-strong);background:var(--paper-2);font-size:11.5px;font-weight:600;color:var(--ink-soft);cursor:pointer}
+  .me-group{
+    font-family:var(--font-disp);font-size:14px;font-weight:700;color:var(--ink);
+    margin:16px 2px 6px;padding-bottom:4px;border-bottom:1px solid var(--rule-strong);
+    display:flex;align-items:baseline;gap:8px;
+  }
+  .me-group .n{margin-left:auto;font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--figure)}
+  .me-card{
+    background:var(--paper-2);border:1px solid var(--rule);border-left:3px solid var(--rule-strong);
+    border-radius:10px;padding:9px 13px 10px;margin:0 0 7px;cursor:pointer;
+    transition:border-color .12s,box-shadow .12s;
+  }
+  .me-card:hover{box-shadow:var(--shadow);border-left-color:var(--ink)}
+  .me-card.day{border-left-color:var(--shu);background:var(--shu-soft)}
+  .me-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+  .me-date{font-family:var(--font-mono);font-size:11.5px;font-weight:700;color:var(--ink-soft);flex:0 0 auto}
+  .me-dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto;align-self:center}
+  .me-cli{font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:230px}
+  .me-task{font-size:12px;color:var(--ink-soft)}
+  .me-time{font-family:var(--font-mono);font-size:11px;color:var(--figure);margin-left:auto;flex:0 0 auto}
+  .me-badge{font-size:10.5px;font-weight:700;color:var(--shu);border:1px solid var(--shu);border-radius:5px;padding:0 5px}
+  .me-body{font-size:13.5px;line-height:1.7;color:var(--ink);white-space:pre-wrap;word-break:break-word}
+  .me-body mark{background:rgba(220,74,46,.20);color:inherit;border-radius:2px;padding:0 1px}
+  .me-cli mark,.me-task mark{background:rgba(220,74,46,.20);color:inherit}
+  @media(max-width:900px){
+    .me-cli{max-width:150px}
+    .me-time{margin-left:0}
+  }
   .ana-inner{max-width:1440px;margin:0 auto}
   .ana-nav{display:flex;align-items:center;gap:6px}
   .ana-nav button{width:34px;height:34px;border-radius:9px;border:1px solid var(--rule);background:var(--paper-2);color:var(--ink-soft);font-size:18px;display:grid;place-items:center}
@@ -488,7 +540,11 @@
     <svg class="date-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
   </button>
   <span class="ana-head-title" id="anaHeadTitle" hidden>ふりかえり</span>
+  <span class="ana-head-title" id="memoHeadTitle" hidden>メモ</span>
   <div class="spacer"></div>
+  <button class="icon-btn" id="memoBtn" aria-label="メモ" title="メモ（横断して読み返す・検索）">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 10h16M4 15h10"/><circle cx="17.5" cy="17.5" r="3.5"/><path d="M20 20l2.5 2.5"/></svg>
+  </button>
   <button class="icon-btn" id="sumBtn" aria-label="ふりかえり" title="ふりかえり（月の俯瞰・顧問先別）">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
   </button>
@@ -510,6 +566,7 @@
 </div>
 
 <div class="analysis" id="analysis"><div class="ana-inner" id="anaInner"></div></div>
+<div class="memo" id="memoView"><div class="memo-inner" id="memoInner"></div></div>
 
 <div class="dock" id="dock"></div>
 
@@ -1139,6 +1196,7 @@ window.addEventListener("mouseup",()=>{
   clearGuide(d);
   if(!d.moved) return;                           // 動いていなければクリック＝編集を開く
   suppressBlockClick=true; setTimeout(()=>suppressBlockClick=false,60);
+  if(d.e.start===d.s0 && d.e.end===d.e0) return; // 掴んだが元の時刻に戻して離した → 変更なし
   markKeyDirty(dateKey(new Date(d.s0)));         // 元の日
   markDayDirty(d.e.start);                       // 移動後の日
   save(); renderAll();
@@ -1582,24 +1640,29 @@ document.getElementById("expBtnH").onclick=openExport;
    ふりかえり（月ダッシュボード）… ヘッダのグラフアイコンで画面切替
 ============================================================ */
 const anaInner=document.getElementById("anaInner");
-let appView="log";            // "log"(記録) | "analysis"(ふりかえり)
+let appView="log";            // "log"(記録) | "analysis"(ふりかえり) | "memo"(メモ)
 let anaMonth=null;            // 表示中の月（1日固定）
 let anaSelDay=null;           // 日詳細パネルで選択中の日（"YYYY-MM-DD"）
 
 function setView(v){
   appView=v;
-  const isAna=v==="analysis";
+  const isAna=v==="analysis", isMemo=v==="memo";
   if(isAna && !anaMonth) anaMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1);
   document.body.classList.toggle("mode-analysis",isAna);
+  document.body.classList.toggle("mode-memo",isMemo);
   document.getElementById("sumBtn").classList.toggle("active",isAna);
+  document.getElementById("memoBtn").classList.toggle("active",isMemo);
   document.getElementById("anaHeadTitle").hidden=!isAna;
+  document.getElementById("memoHeadTitle").hidden=!isMemo;
   if(isAna) renderAnalysis();
+  else if(isMemo) renderMemoView();
   else { renderAll(); scrollToRelevant(); }
 }
 document.getElementById("sumBtn").onclick=()=>{
   if(appView==="log") anaMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1);
-  setView(appView==="log"?"analysis":"log");
+  setView(appView==="analysis"?"log":"analysis");
 };
+document.getElementById("memoBtn").onclick=()=>{ setView(appView==="memo"?"log":"memo"); };
 
 function monthCellData(year,month){
   // day番号 -> {min,count,byClient:Map(clientId->min)}  … 俯瞰カレンダー用
@@ -1869,6 +1932,175 @@ function chRange(){
   if(chPeriod==="3m")    return {s:new Date(y,mo-2,1).getTime(), e:new Date(y,mo+1,1).getTime(), label:"直近3ヶ月"};
   return {s:-Infinity, e:Infinity, label:"全期間"};
 }
+/* ============================================================
+   メモ（第3のビュー）— メモを主役に、横断して読み返す
+============================================================ */
+let mePeriod="all";     // "month" | "prev" | "3m" | "all"
+let meGroup="date";     // "date"(日付) | "client"(顧問先) | "task"(業務)
+let meQ="";             // 検索語
+let meCli="";           // 顧問先で絞る（""=すべて）
+let meTask="";          // 業務で絞る（""=すべて）
+let meComposing=false;  // 日本語入力の変換中フラグ（変換中は一覧を描き直さない）
+
+function mePeriodRange(){
+  const t=startOfDay(new Date());
+  const y=t.getFullYear(), mo=t.getMonth();
+  if(mePeriod==="month") return {s:new Date(y,mo,1).getTime(), e:new Date(y,mo+1,1).getTime(), label:`${mo+1}月`};
+  if(mePeriod==="prev")  return {s:new Date(y,mo-1,1).getTime(), e:new Date(y,mo,1).getTime(), label:`${new Date(y,mo-1,1).getMonth()+1}月`};
+  if(mePeriod==="3m")    return {s:new Date(y,mo-2,1).getTime(), e:new Date(y,mo+1,1).getTime(), label:"直近3ヶ月"};
+  return {s:-Infinity, e:Infinity, label:"全期間"};
+}
+function hlt(text,q){
+  const t=esc(text||"");
+  if(!q) return t;
+  const qq=esc(q).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  try{ return t.replace(new RegExp(qq,"gi"),m=>`<mark>${m}</mark>`); }catch(_){ return t; }
+}
+/* メモを持つものだけを集める。作業メモ(entry)と全体メモ(dayMemos)を同じ流れに並べる */
+function meCollect(){
+  const r=mePeriodRange(), q=meQ.trim().toLowerCase(), now=Date.now();
+  const out=[];
+  for(const e of state.entries){
+    const memo=(e.memo||"").trim();
+    if(!memo) continue;                                    // メモのない記録は出さない
+    if(e.start<r.s || e.start>=r.e) continue;
+    if(meCli && e.clientId!==meCli) continue;
+    if(meTask && (e.task||"")!==meTask) continue;
+    const c=getClient(e.clientId);
+    const cliLabel=(c.code?c.code+" ":"")+c.name;
+    if(q && !(memo.toLowerCase().includes(q) || (e.task||"").toLowerCase().includes(q) || cliLabel.toLowerCase().includes(q))) continue;
+    out.push({kind:"entry",ms:e.start,e,c,cliLabel,memo,dur:((e.end||now)-e.start)/60000});
+  }
+  if(!meCli && !meTask){                                   // 全体メモは顧問先・業務に属さない
+    for(const k in state.dayMemos){
+      const memo=(state.dayMemos[k]||"").trim();
+      if(!memo) continue;
+      const ms=dayFromKey(k).getTime();
+      if(ms<r.s || ms>=r.e) continue;
+      if(q && !memo.toLowerCase().includes(q)) continue;
+      out.push({kind:"day",ms,memo,key:k});
+    }
+  }
+  return out.sort((a,b)=>b.ms-a.ms);                       // 新しい順
+}
+function meCardHTML(it){
+  const d=new Date(it.ms);
+  const date=`${d.getMonth()+1}/${d.getDate()}（${DOW[d.getDay()]}）`;
+  if(it.kind==="day"){
+    return `<div class="me-card day" data-ms="${it.ms}">
+      <div class="me-top"><span class="me-date">${date}</span><span class="me-badge">申し送り</span></div>
+      <div class="me-body">${hlt(it.memo,meQ)}</div></div>`;
+  }
+  return `<div class="me-card" data-ms="${it.ms}">
+    <div class="me-top">
+      <span class="me-date">${date}</span>
+      <span class="me-dot" style="background:${it.c.color}"></span>
+      <span class="me-cli">${hlt(it.cliLabel,meQ)}</span>
+      <span class="me-task">${hlt(it.e.task||"(業務未設定)",meQ)}</span>
+      <span class="me-time">${fmtTime(it.e.start)}–${it.e.end?fmtTime(it.e.end):"…"} · ${fmtDurShort(it.dur)}</span>
+    </div>
+    <div class="me-body">${hlt(it.memo,meQ)}</div></div>`;
+}
+function renderMemoView(){
+  // 外枠は一度だけ組む（検索欄を作り直さない＝日本語入力の変換とカーソル位置を壊さない）
+  const chips=[["month","今月"],["prev","先月"],["3m","3ヶ月"],["all","全期間"]]
+    .map(([k,l])=>`<button class="me-chip${mePeriod===k?" on":""}" data-p="${k}">${l}</button>`).join("");
+  const groups=[["date","日付"],["client","顧問先"],["task","業務"]]
+    .map(([k,l])=>`<button data-g="${k}" class="${meGroup===k?"on":""}">${l}</button>`).join("");
+  // 絞り込みの選択肢は「メモが実在する顧問先・業務」だけを出す
+  const cliSet=new Set(), taskSet=new Set();
+  for(const e of state.entries) if((e.memo||"").trim()){ cliSet.add(e.clientId); taskSet.add(e.task||""); }
+  const cliOpts=[`<option value="">顧問先：すべて</option>`].concat(
+    state.clients.filter(c=>cliSet.has(c.id))
+      .map(c=>`<option value="${c.id}"${meCli===c.id?" selected":""}>${esc((c.code?c.code+" ":"")+c.name)}</option>`)).join("");
+  const taskOpts=[`<option value="">業務：すべて</option>`].concat(
+    [...taskSet].filter(Boolean).sort()
+      .map(t=>`<option value="${esc(t)}"${meTask===t?" selected":""}>${esc(t)}</option>`)).join("");
+
+  document.getElementById("memoInner").innerHTML=`
+    <div class="me-bar">
+      <input class="me-search" id="meSearch" type="search" placeholder="メモ・業務・顧問先を検索…" value="${esc(meQ)}">
+      <select class="me-sel" id="meCliSel">${cliOpts}</select>
+      <select class="me-sel" id="meTaskSel">${taskOpts}</select>
+    </div>
+    <div class="me-chips">${chips}<span style="flex:1"></span><span class="me-seg">${groups}</span></div>
+    <div class="me-meta" id="meMeta"></div>
+    <div id="meList"></div>`;
+
+  const sb=document.getElementById("meSearch");
+  sb.addEventListener("compositionstart",()=>{ meComposing=true; });
+  sb.addEventListener("compositionend",()=>{ meComposing=false; meQ=sb.value; renderMemoList(); });
+  sb.addEventListener("input",()=>{ if(meComposing) return; meQ=sb.value; renderMemoList(); });
+  document.getElementById("meCliSel").onchange=ev=>{ meCli=ev.target.value; renderMemoList(); };
+  document.getElementById("meTaskSel").onchange=ev=>{ meTask=ev.target.value; renderMemoList(); };
+  document.querySelectorAll("#memoInner .me-chip").forEach(b=>b.onclick=()=>{
+    mePeriod=b.dataset.p;
+    document.querySelectorAll("#memoInner .me-chip").forEach(x=>x.classList.toggle("on",x.dataset.p===mePeriod));
+    renderMemoList();
+  });
+  document.querySelectorAll("#memoInner .me-seg button").forEach(b=>b.onclick=()=>{
+    meGroup=b.dataset.g;
+    document.querySelectorAll("#memoInner .me-seg button").forEach(x=>x.classList.toggle("on",x.dataset.g===meGroup));
+    renderMemoList();
+  });
+  renderMemoList();
+}
+
+/* 一覧とメタ情報だけを描き直す（検索欄・チップは触らない） */
+function renderMemoList(){
+  const items=meCollect();
+  const r=mePeriodRange();
+  let body="";
+  if(items.length===0){
+    body=`<div class="hint" style="margin:20px 4px">${meQ?`「${esc(meQ)}」に一致するメモはありません。`:`${r.label}のメモはありません。`}</div>`;
+  }else if(meGroup==="date"){
+    const cnt=new Map();
+    for(const it of items){ const k=dateKey(new Date(it.ms)); cnt.set(k,(cnt.get(k)||0)+1); }
+    let cur="";
+    for(const it of items){
+      const k=dateKey(new Date(it.ms));
+      if(k!==cur){
+        cur=k; const d=dayFromKey(k);
+        body+=`<div class="me-group">${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${DOW[d.getDay()]}）<span class="n">${cnt.get(k)}件</span></div>`;
+      }
+      body+=meCardHTML(it);
+    }
+  }else{
+    const key=it=>meGroup==="client"
+      ? (it.kind==="day"?"（全体メモ）":it.cliLabel)
+      : (it.kind==="day"?"（全体メモ）":(it.e.task||"(業務未設定)"));
+    const m=new Map();
+    for(const it of items){ const k=key(it); if(!m.has(k)) m.set(k,[]); m.get(k).push(it); }
+    for(const [k,list] of [...m.entries()].sort((a,b)=>b[1].length-a[1].length)){
+      body+=`<div class="me-group">${esc(k)}<span class="n">${list.length}件</span></div>`;
+      for(const it of list) body+=meCardHTML(it);
+    }
+  }
+  document.getElementById("meList").innerHTML=body;
+
+  const dayN=items.filter(x=>x.kind==="day").length;
+  document.getElementById("meMeta").innerHTML=
+    `${r.label} ・ ${items.length}件${dayN?`（うち申し送り ${dayN}件）`:""}${(meCli||meTask)?" ・ 絞り込み中は申し送りを除く":""}`+
+    `${items.length?`<button class="me-copy" id="meCopy">コピー</button>`:""}`;
+
+  document.querySelectorAll("#meList .me-card").forEach(el=>el.onclick=()=>{
+    selDate=startOfDay(new Date(Number(el.dataset.ms))); setView("log");
+  });
+  const cp=document.getElementById("meCopy");
+  if(cp) cp.onclick=()=>{
+    const L=[`# メモ（${r.label}${meCli?` / ${getClient(meCli).name}`:""}${meTask?` / ${meTask}`:""}${meQ?` / 「${meQ}」`:""}）`];
+    let cur="";
+    for(const it of items){
+      const d=new Date(it.ms), k=dateKey(d);
+      if(k!==cur){ cur=k; L.push("",`## ${d.getMonth()+1}/${d.getDate()}（${DOW[d.getDay()]}）`); }
+      if(it.kind==="day") L.push(`- 申し送り`);
+      else L.push(`- ${fmtTime(it.e.start)}–${it.e.end?fmtTime(it.e.end):"…"} ${it.cliLabel} ${it.e.task||""}`);
+      it.memo.split(/\r?\n/).forEach(x=>{ if(x.trim()) L.push(`  - ${x.trim()}`); });
+    }
+    copyText(L.join("\n"),null);
+  };
+}
+
 function openClientHistory(clientId){
   const c=getClient(clientId);
   drawClientHistory(c); openSheet();
@@ -2143,7 +2375,7 @@ function renderAll(){ renderHeader(); renderTimeline(); renderSide(); renderDock
 setInterval(()=>{
   const run=runningEntry();
   updateElapsed();
-  if(appView==="analysis") return;               // ふりかえり表示中は毎秒再描画しない（トグル操作を守る）
+  if(appView!=="log") return;                    // ふりかえり/メモ表示中は毎秒再描画しない（操作と入力を守る）
   if(!isSameDay(new Date(),selDate)) return;
   if(dragSel||dragEdit) return;                  // ドラッグ中は再描画しない（掴んでいる要素・ghostが消えるのを防ぐ）
   renderTimeline();                              // タイムライン(入力欄なし)は再描画OK
