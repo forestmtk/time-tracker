@@ -232,10 +232,15 @@
   .ana-card h4 .sub{font-weight:400;color:var(--figure)}
   .ana-main{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(0,1fr);gap:15px;align-items:start}
   .ana-two{display:grid;grid-template-columns:1fr 1fr;gap:13px;align-items:start}
-  .ana-day-card{position:sticky;top:0}
+  .ana-day-card{
+    position:sticky;top:0;
+    /* 画面内に収める。パネル内部でスクロールするので、ページごと動いて月間が消えることがない */
+    max-height:calc(100dvh - var(--hdr-h,60px) - 40px);
+    overflow-y:auto;overscroll-behavior:contain;
+  }
   @media(max-width:900px){
     .ana-main,.ana-two{grid-template-columns:1fr}
-    .ana-day-card{position:static}
+    .ana-day-card{position:static;max-height:none;overflow:visible}
   }
 
   /* 日詳細（カレンダー右のメモ欄） */
@@ -478,7 +483,7 @@
   .ov-cell.today{outline:1.6px solid var(--shu);outline-offset:-1.6px}
   .ov-cell.sel{border-color:var(--ink);box-shadow:0 0 0 1.4px var(--ink) inset}
   .ov-r1{display:flex;align-items:center;justify-content:space-between;line-height:1}
-  .ov-num{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--ink)}
+  .ov-num{font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--ink);line-height:1.1}
   .ov-num.sun{color:var(--shu)}.ov-num.sat{color:#3E6D9C}
   .ov-num.dim{color:var(--figure)}
   .ov-st{display:flex;align-items:center;gap:4px}
@@ -1582,7 +1587,7 @@ function unsavedPastDays(){
   const set=new Set();
   for(const e of state.entries){
     const t=startOfDay(new Date(e.start)).getTime();
-    if(t<today && t>=today-7*86400000){                // 直近7日以内の過去日
+    if(t<today){                                      // 過去日は期限なしで対象（7日で黙って落ちる穴を塞いだ）
       const k=dateKey(new Date(e.start));
       if(!state.savedDays[k]) set.add(k);
     }
@@ -2267,16 +2272,15 @@ function paneRender(t){
     const nCli=state.clients.filter(c=>c.kind==="client").length;
     const nEnt=state.entries.length;
     const st=saveStatus();
-    const list=st.old.map(k=>{ const d=dayFromKey(k); return `${d.getMonth()+1}/${d.getDate()}（${DOW[d.getDay()]}）`; }).join("、");
+    const list=st.all.map(k=>{ const d=dayFromKey(k); return `${d.getMonth()+1}/${d.getDate()}（${DOW[d.getDay()]}）`; }).join("、");
     pane.innerHTML=`
-      <div class="sv-box${st.old.length?" warn":""}">
+      <div class="sv-box${st.all.length?" warn":""}">
         <div class="sv-h">日報の保存状況</div>
-        <div class="sv-row"><span>未保存の過去日</span><b class="mono">${st.all.length}日分</b></div>
-        <div class="sv-row"><span>うち7日より前</span><b class="mono${st.old.length?" bad":""}">${st.old.length}日分</b></div>
-        ${st.old.length
-          ? `<div class="sv-note">7日より前の未保存日は、今の作りでは保存バナーに出てきません。該当：${esc(list)}</div>`
-          : `<div class="sv-note ok">7日より前に取り残された日はありません。</div>`}
-        ${st.resave?`<div class="sv-note">保存後に修正して再保存待ちの日：${st.resave}日分（こちらは期限なく追跡されます）</div>`:""}
+        <div class="sv-row"><span>未保存の過去日</span><b class="mono${st.all.length?" bad":""}">${st.all.length}日分</b></div>
+        <div class="sv-row"><span>保存後に修正した日（再保存待ち）</span><b class="mono">${st.resave}日分</b></div>
+        ${st.all.length
+          ? `<div class="sv-note">該当：${esc(list)}<br>起動時の保存バナーから、まとめて保存できます。</div>`
+          : `<div class="sv-note ok">取り残された日はありません。過去日は日数に関係なく追跡しています。</div>`}
       </div>
       <div class="hint">この端末のデータをファイルに書き出し／読み込みします。PC⇄スマホでデータを移すときやバックアップに。<b>自動同期はされません。</b>読み込むと今のデータは置き換わります。</div>
       <div style="margin:10px 4px;font-size:13px;color:var(--ink-soft)">現在：顧問先 <b>${nCli}</b> 件 ／ 記録 <b>${nEnt}</b> 件</div>
@@ -2290,7 +2294,6 @@ function paneRender(t){
 /* 保存状況を数える（7日窓に関係なく、未保存の過去日を全部見る） */
 function saveStatus(){
   const today=startOfDay(new Date()).getTime();
-  const cut=today-7*86400000;
   const sd=state.savedDays||{};
   const set=new Set();
   for(const e of state.entries){
@@ -2298,9 +2301,8 @@ function saveStatus(){
     if(t<today && !sd[dateKey(new Date(e.start))]) set.add(dateKey(new Date(e.start)));
   }
   const all=[...set].sort();
-  const old=all.filter(k=>dayFromKey(k).getTime()<cut);
   const resave=state.resaveDays?Object.keys(state.resaveDays).filter(k=>dayFromKey(k).getTime()<today).length:0;
-  return {all,old,resave};
+  return {all,resave};
 }
 function exportData(){
   try{
@@ -2422,6 +2424,14 @@ setInterval(()=>{
   const st=document.getElementById("sideTotal"); if(st) st.textContent=fmtDur(total);
   if(run){ const rd=document.getElementById("runLogDur"); if(rd) rd.textContent=fmtDurShort((now-run.start)/60000); }
 },1000);
+
+/* ヘッダの実高をCSS変数へ（右パネルの高さ上限を決め打ちにしないため） */
+function syncHeaderH(){
+  const h=document.querySelector("header");
+  if(h) document.documentElement.style.setProperty("--hdr-h",h.offsetHeight+"px");
+}
+syncHeaderH();
+window.addEventListener("resize",syncHeaderH);
 
 /* 初期化 */
 renderAll();
