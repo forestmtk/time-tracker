@@ -140,6 +140,14 @@
     pointer-events:none;
   }
   .now-dot{position:absolute;left:-4px;transform:translateY(-4px);width:8px;height:8px;border-radius:50%;background:var(--shu);z-index:6;pointer-events:none}
+  .dg-line{position:absolute;left:-56px;right:0;height:0;border-top:1.5px dashed var(--ink);z-index:7;pointer-events:none}
+  .dg-flag{
+    position:absolute;left:-56px;transform:translateY(-9px);
+    background:var(--ink);color:#fff;font-size:10px;font-weight:700;
+    padding:1px 6px;border-radius:4px 4px 4px 0;font-family:var(--font-mono);
+    z-index:8;pointer-events:none;white-space:nowrap;
+  }
+  .dg-flag.end{transform:translateY(0);border-radius:0 4px 4px 4px}
   .ghost{
     position:absolute;left:0;right:0;background:var(--shu-soft);
     border:1.5px dashed var(--shu);border-radius:8px;z-index:4;pointer-events:none;
@@ -1069,6 +1077,23 @@ function viewRange(){
   const vt=startOfDay(selDate).getTime()+VIEW_START_H*3600000;
   return [vt, vt+(VIEW_END_H-VIEW_START_H)*3600000];
 }
+function dragGuide(d,start,end){
+  if(!d.g){
+    const mk=cls=>{ const x=document.createElement("div"); x.className=cls; grid.appendChild(x); return x; };
+    d.g={l1:mk("dg-line"),f1:mk("dg-flag"),l2:mk("dg-line"),f2:mk("dg-flag end")};
+  }
+  const [vt]=viewRange();
+  const y=ms=>(ms-vt)/60000*PX_MIN;
+  const y1=y(start);
+  d.g.l1.style.top=y1+"px"; d.g.f1.style.top=y1+"px"; d.g.f1.textContent=fmtTime(start);
+  const showEnd=d.e.end!==null;                  // 進行中は終了＝「今」なので旗を出さない
+  d.g.l2.hidden=!showEnd; d.g.f2.hidden=!showEnd;
+  if(showEnd){
+    const y2=y(end);
+    d.g.l2.style.top=y2+"px"; d.g.f2.style.top=y2+"px"; d.g.f2.textContent=fmtTime(end);
+  }
+}
+function clearGuide(d){ if(d.g){ for(const k in d.g) d.g[k].remove(); d.g=null; } }
 function paintDrag(d){
   const [vt]=viewRange();
   const end=d.e.end||Date.now();
@@ -1076,6 +1101,7 @@ function paintDrag(d){
   d.el.style.height=Math.max(22,(end-d.e.start)/60000*PX_MIN)+"px";
   const du=d.el.querySelector(".b-dur");
   if(du) du.textContent=`${fmtTime(d.e.start)}–${d.e.end?fmtTime(end):"進行中"} · ${fmtDurShort((end-d.e.start)/60000)}`;
+  dragGuide(d,d.e.start,end);
 }
 function onBlockDown(ev,e,el){
   if(ev.button!==0) return;
@@ -1110,6 +1136,7 @@ window.addEventListener("mouseup",()=>{
   if(!dragEdit) return;
   const d=dragEdit; dragEdit=null;
   d.el.classList.remove("dragging");
+  clearGuide(d);
   if(!d.moved) return;                           // 動いていなければクリック＝編集を開く
   suppressBlockClick=true; setTimeout(()=>suppressBlockClick=false,60);
   markKeyDirty(dateKey(new Date(d.s0)));         // 元の日
