@@ -234,8 +234,9 @@
   .ana-two{display:grid;grid-template-columns:1fr 1fr;gap:13px;align-items:start}
   .ana-day-card{
     position:sticky;top:0;
-    /* 画面内に収める。パネル内部でスクロールするので、ページごと動いて月間が消えることがない */
-    max-height:calc(100dvh - var(--hdr-h,60px) - 26px);
+    /* 画面内に収める。ヘッダとドック（進行中バー／開始ボタン）のぶんを引く。
+       パネル内部でスクロールするので、ページごと動いて月間が消えることがない */
+    max-height:calc(100dvh - var(--hdr-h,60px) - var(--dock-h,64px) - 14px);
     overflow-y:auto;overscroll-behavior:contain;
   }
   @media(max-width:900px){
@@ -941,6 +942,7 @@ function renderDock(){
     dock.appendChild(st);
   }
   updateElapsed();
+  syncHeaderH();   // ドックの高さが変わったら --dock-h を測り直す（ふりかえり右パネルの上限計算に効く）
 }
 function updateElapsed(){
   const run=runningEntry(); const el=document.getElementById("runElapsed");
@@ -2448,6 +2450,8 @@ setInterval(()=>{
 function syncHeaderH(){
   const h=document.querySelector("header");
   if(h) document.documentElement.style.setProperty("--hdr-h",h.offsetHeight+"px");
+  const d=document.getElementById("dock");
+  if(d) document.documentElement.style.setProperty("--dock-h",d.offsetHeight+"px");
 }
 syncHeaderH();
 window.addEventListener("resize",syncHeaderH);
