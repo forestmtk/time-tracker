@@ -214,6 +214,78 @@
   .me-body{font-size:13.5px;line-height:1.7;color:var(--ink);white-space:pre-wrap;word-break:break-word}
   .me-body mark{background:rgba(220,74,46,.20);color:inherit;border-radius:2px;padding:0 1px}
   .me-cli mark,.me-task mark{background:rgba(220,74,46,.20);color:inherit}
+
+  /* --- メモの記法：やること・預り/返却 --- */
+  .me-line{font-size:13.5px;line-height:1.7;color:var(--ink);white-space:pre-wrap;word-break:break-word}
+  .me-line:empty{height:1.7em}
+  .me-todo{
+    display:flex;align-items:flex-start;gap:7px;cursor:pointer;
+    font-size:13.5px;line-height:1.7;color:var(--ink);border-radius:5px;padding:0 3px;margin:0 -3px;
+  }
+  .me-todo:hover{background:rgba(30,42,56,.05)}
+  .me-box{
+    flex:0 0 auto;width:15px;height:15px;margin-top:4px;border:1.5px solid var(--rule-strong);border-radius:4px;
+    background:var(--paper-2);display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:800;color:#fff;line-height:1;
+  }
+  .me-todo.done .me-box{background:var(--figure);border-color:var(--figure)}
+  .me-todo.done .me-txt{color:var(--figure);text-decoration:line-through}
+  .me-txt{word-break:break-word}
+  .me-tag{font-weight:700;border-radius:4px;padding:0 4px;font-size:12.5px}
+  .me-tag.hold{color:var(--shu);background:var(--shu-soft)}
+  .me-tag.back{color:#2E7D6B;background:rgba(46,125,107,.10)}
+
+  /* --- 預り台帳ボード --- */
+  .hd-note{font-size:11.5px;color:var(--figure);margin:0 2px 10px;line-height:1.6}
+  .hd-cli{
+    display:flex;align-items:center;gap:8px;margin:14px 2px 6px;padding-bottom:4px;
+    border-bottom:1px solid var(--rule-strong);font-family:var(--font-disp);font-size:14px;font-weight:700;color:var(--ink);
+  }
+  .hd-cli .n{margin-left:auto;font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--figure)}
+  .hd-row{
+    display:flex;align-items:center;gap:10px;background:var(--paper-2);
+    border:1px solid var(--rule);border-left:3px solid var(--shu);border-radius:10px;
+    padding:10px 13px;margin:0 0 7px;cursor:pointer;transition:box-shadow .12s;
+  }
+  .hd-row:hover{box-shadow:var(--shadow)}
+  .hd-label{font-size:13.5px;font-weight:600;color:var(--ink);word-break:break-word;flex:1 1 auto}
+  .hd-when{font-family:var(--font-mono);font-size:11.5px;color:var(--figure);flex:0 0 auto}
+  .hd-age{font-family:var(--font-mono);font-size:11.5px;font-weight:700;color:var(--ink-soft);flex:0 0 auto;min-width:52px;text-align:right}
+  .hd-row.stale{background:var(--shu-soft)}
+  .hd-row.stale .hd-age{color:var(--shu)}
+
+  /* --- 計測中の持ち越しブリーフ（記録画面の右上） --- */
+  .brief{
+    background:var(--paper-2);border:1px solid var(--rule);border-left:3px solid var(--shu);
+    border-radius:10px;padding:9px 12px 10px;margin:0 22px 12px;box-shadow:var(--shadow);
+  }
+  .brief-h{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+  .brief-h .t{font-size:11.5px;font-weight:700;color:var(--shu);letter-spacing:.02em}
+  .brief-h .c{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brief-h .hist{margin-left:auto;flex:0 0 auto;padding:3px 9px;border-radius:7px;border:1px solid var(--rule-strong);background:var(--paper-2);font-size:11px;font-weight:600;color:var(--ink-soft);cursor:pointer}
+  .brief-row{display:flex;align-items:baseline;gap:8px;padding:3px 0;cursor:pointer;border-radius:5px}
+  .brief-row:hover{background:rgba(30,42,56,.05)}
+  .brief-k{flex:0 0 auto;font-size:10.5px;font-weight:700;border-radius:4px;padding:1px 5px}
+  .brief-k.hold{color:var(--shu);border:1px solid var(--shu)}
+  .brief-k.todo{color:var(--ink-soft);border:1px solid var(--rule-strong)}
+  .brief-t{font-size:12.5px;color:var(--ink);flex:1 1 auto;word-break:break-word}
+  .brief-a{font-family:var(--font-mono);font-size:11px;color:var(--figure);flex:0 0 auto}
+
+  /* --- メモ欄のワンタップ挿入 --- */
+  .mm-btns{display:flex;gap:5px;margin:3px 0 0}
+  .mm-btns.day{margin:4px 22px 0}
+  .mm-btn{
+    padding:2px 8px;border-radius:6px;border:1px solid var(--rule-strong);background:var(--paper-2);
+    font-size:10.5px;font-weight:600;color:var(--figure);cursor:pointer;line-height:1.6;
+  }
+  .mm-btn:hover{color:var(--ink);border-color:var(--ink)}
+  .mm-btn.hold:hover{color:var(--shu);border-color:var(--shu)}
+
+  /* --- 顧問先選択の持ち越しバッジ --- */
+  .pick-flags{margin-left:auto;display:flex;gap:4px;flex:0 0 auto}
+  .pick-flag{font-family:var(--font-mono);font-size:10px;font-weight:700;border-radius:5px;padding:1px 5px}
+  .pick-flag.hold{color:var(--shu);border:1px solid var(--shu);background:var(--shu-soft)}
+  .pick-flag.todo{color:var(--ink-soft);border:1px solid var(--rule-strong)}
   @media(max-width:900px){
     .me-cli{max-width:150px}
     .me-time{margin-left:0}
@@ -1106,6 +1178,7 @@ function renderClientPicker(){
     <div id="cliList"></div>`;
   const inp=document.getElementById("cliSearch");
   const draw=()=>{
+    _pickHM=holdMap(); _pickTM=todoMap();   // 1回だけ組んで全行で使い回す
     const q=(inp.value||"").trim().toLowerCase();
     const list=document.getElementById("cliList"); list.innerHTML="";
     const specials=state.clients.filter(c=>c.kind!=="client");
@@ -1123,12 +1196,16 @@ function renderClientPicker(){
   };
   inp.oninput=draw; draw();
 }
+let _pickHM=null,_pickTM=null;   // 顧問先選択で使う持ち越しの下ごしらえ
 function pickRow(c,special){
   const b=document.createElement("button");
   b.className="pick"+(special?" special":"");
+  const nh=(_pickHM&&_pickHM.get(c.id)||[]).length;
+  const nt=(_pickTM&&_pickTM.get(c.id)||[]).length;
+  const flags=(nh||nt)?`<span class="pick-flags">${nh?`<span class="pick-flag hold">預${nh}</span>`:""}${nt?`<span class="pick-flag todo">未${nt}</span>`:""}</span>`:"";
   b.innerHTML=`<span class="dot" style="background:${c.color}"></span>
     <span class="code mono">${esc(c.code)}</span>
-    <span class="nm">${esc(c.name)}</span>`;
+    <span class="nm">${esc(c.name)}</span>${flags}`;
   b.onclick=()=>renderTaskPicker(c);
   return b;
 }
@@ -1381,6 +1458,59 @@ function openEditEntry(id){
 ============================================================ */
 const sideEl=document.getElementById("side");
 function autoGrow(t){ t.style.height="auto"; t.style.height=Math.max(32,t.scrollHeight+2)+"px"; }
+/* メモ欄のワンタップ挿入。手打ちを強いると記法は続かないので、必ずボタンから入れられるようにする。
+   末尾に新しい行として足す（カーソル位置に割り込むより結果が読める） */
+function buildMemoBtns(host,ta,commit,withHold){
+  host.innerHTML="";
+  const defs=[["☐ やること","- [ ] ",""]];
+  if(withHold){ defs.push(["#預り","#預り ","hold"],["#返却","#返却 ","hold"]); }
+  for(const [label,snippet,cls] of defs){
+    const b=document.createElement("button");
+    b.type="button"; b.className="mm-btn"+(cls?" "+cls:""); b.textContent=label;
+    b.onclick=()=>{
+      const v=ta.value;
+      ta.value=v+(v.length&&!/\n$/.test(v)?"\n":"")+snippet;
+      commit(); autoGrow(ta);
+      ta.focus(); const p=ta.value.length; ta.setSelectionRange(p,p);
+    };
+    host.appendChild(b);
+  }
+}
+
+/* 計測中の「前回までの持ち越し」。中断からの復帰では検索しに行く発想が湧かないので、こちらから差し出す。
+   いま書いている記録そのもののやることは出さない（持ち越しだけを見せる） */
+function renderBrief(){
+  const slot=document.getElementById("briefSlot"); if(!slot) return;
+  slot.innerHTML="";
+  const run=runningEntry();
+  if(!run || !isSameDay(new Date(run.start),selDate)) return;
+  const c=getClient(run.clientId);
+  const holds=holdMap().get(run.clientId)||[];
+  const todos=(todoMap().get(run.clientId)||[]).filter(t=>t.entryId!==run.id);
+  if(!holds.length && !todos.length) return;
+
+  const rows=[]
+    .concat(holds.map(h=>({k:"hold",label:"預り",text:h.label,ms:h.ms})))
+    .concat(todos.map(t=>({k:"todo",label:"未完",text:t.text||"(内容なし)",ms:t.ms})));
+
+  const box=document.createElement("div"); box.className="brief";
+  box.innerHTML=`<div class="brief-h">
+      <span class="t">前回までの持ち越し</span>
+      <span class="c">${esc((c.code?c.code+" ":"")+c.name)}</span>
+      <button class="hist" id="briefHist">履歴</button>
+    </div>`+
+    rows.map(r=>`<div class="brief-row" data-ms="${r.ms}">
+      <span class="brief-k ${r.k}">${r.label}</span>
+      <span class="brief-t">${esc(r.text)}</span>
+      <span class="brief-a">${agoLabel(r.ms)}</span></div>`).join("");
+  slot.appendChild(box);
+
+  box.querySelector("#briefHist").onclick=ev=>{ ev.stopPropagation(); openClientHistory(run.clientId); };
+  box.querySelectorAll(".brief-row").forEach(el=>el.onclick=()=>{
+    selDate=startOfDay(new Date(Number(el.dataset.ms))); renderAll(); scrollToRelevant();
+  });
+}
+
 function renderSide(){
   const key=dateKey(selDate);
   const now=Date.now();
@@ -1389,15 +1519,22 @@ function renderSide(){
 
   sideEl.innerHTML=`
     <div class="side-head"><h3>${(selDate.getMonth()+1)}/${selDate.getDate()} のメモ</h3><span class="side-total mono" id="sideTotal">${fmtDur(total)}</span></div>
+    <div id="briefSlot"></div>
     <textarea class="day-memo" id="dayMemo" placeholder="今日の全体メモ(申し送り・TODO・電話予定など)"></textarea>
+    <div class="mm-btns day" id="dayMemoBtns"></div>
     <div class="side-label">作業ごとのメモ</div>
     <div id="logRows"></div>`;
+
+  renderBrief();
 
   const dm=document.getElementById("dayMemo");
   dm.value=state.dayMemos[key]||"";
   dm.addEventListener("input",()=>{ state.dayMemos[key]=dm.value;
     markKeyDirty(key);   // 日報の所感欄が変わる→再保存対象に
     save(); });
+  buildMemoBtns(document.getElementById("dayMemoBtns"),dm,()=>{
+    state.dayMemos[key]=dm.value; markKeyDirty(key); save();
+  },false);
 
   const rows=document.getElementById("logRows");
   if(dayEntries.length===0){
@@ -1423,6 +1560,9 @@ function renderSide(){
     row.querySelector(".log-top").onclick=()=>openEditEntry(e.id);
     row.querySelector(".log-task").onclick=()=>openEditEntry(e.id);
     row.appendChild(memo);
+    const btns=document.createElement("div"); btns.className="mm-btns";
+    buildMemoBtns(btns,memo,()=>{ e.memo=memo.value; markDayDirty(e.start); save(); },true);
+    row.appendChild(btns);
     rows.appendChild(row);
     autoGrow(memo);
   }
@@ -1898,6 +2038,7 @@ function renderAnaDay(){
       <button class="ad-open" id="anaOpenDay">記録画面で開く ›</button>
     </div>
     <textarea class="day-memo" id="anaDayMemo" placeholder="この日の全体メモ(申し送り・TODOなど)"></textarea>
+    <div class="mm-btns" id="anaDayMemoBtns"></div>
     <div class="side-label">作業ごとのメモ</div>
     <div id="anaDayRows"></div>`;
 
@@ -1908,6 +2049,9 @@ function renderAnaDay(){
   dm.addEventListener("input",()=>{ state.dayMemos[k]=dm.value;
     markKeyDirty(k);
     save(); });
+  buildMemoBtns(document.getElementById("anaDayMemoBtns"),dm,()=>{
+    state.dayMemos[k]=dm.value; markKeyDirty(k); save();
+  },false);
 
   const rows=document.getElementById("anaDayRows");
   if(list.length===0){
@@ -1932,6 +2076,9 @@ function renderAnaDay(){
     row.querySelector(".log-top").onclick=()=>openEditEntry(e.id);
     row.querySelector(".log-task").onclick=()=>openEditEntry(e.id);
     row.appendChild(memo);
+    const btns=document.createElement("div"); btns.className="mm-btns";
+    buildMemoBtns(btns,memo,()=>{ e.memo=memo.value; markDayDirty(e.start); save(); },true);
+    row.appendChild(btns);
     rows.appendChild(row);
     autoGrow(memo);
   }
@@ -1969,9 +2116,102 @@ function chRange(){
   return {s:-Infinity, e:Infinity, label:"全期間"};
 }
 /* ============================================================
+   メモの記法（土台）
+   語彙は2系統だけ。増やすと入力が続かないので、これ以上増やさないこと。
+     - [ ] / - [x]   … やること／やったこと（Obsidian のタスク記法と同じ）
+     #預り / #返却    … 現物書類の向き（いま自分の手元か、先方に戻したか）
+   郵送は送付書が残るので追える。持参のときに欠けるのが「向きの記録」で、そこを埋めるのが #預り/#返却。
+============================================================ */
+const RE_TODO=/^[-*・]?\s*\[([ xX])\]\s*(.*)$/;
+const RE_TAG=/#(預り|返却)\s*(.*)$/;
+
+/* メモ1件を走査して、やること と 預り/返却 を取り出す */
+function scanMemo(text){
+  const todos=[], tags=[];
+  String(text||"").split(/\r?\n/).forEach((raw,i)=>{
+    const ln=raw.trim(); if(!ln) return;
+    const m=ln.match(RE_TODO);
+    if(m) todos.push({done:m[1].toLowerCase()==="x", text:m[2].trim(), line:i});
+    const g=ln.match(RE_TAG);
+    if(g) tags.push({kind:g[1]==="預り"?"hold":"back", label:g[2].trim().replace(/^[-–—:：]\s*/,""), line:i});
+  });
+  return {todos,tags};
+}
+function hasOpenTodo(text){ return scanMemo(text).todos.some(t=>!t.done); }
+
+/* 預り台帳：#預り と #返却 を顧問先ごとに突き合わせ、いま手元にあるものだけ残す
+   ・#預り X … Xを預かった（Xが空なら「書類」）
+   ・#返却   … ラベルなし＝その顧問先の預りを全部閉じる
+   ・#返却 X … Xに一致する預りだけ閉じる（部分一致・双方向）。一致しなければ何も閉じない */
+function holdLedger(){
+  const byCli=new Map();
+  for(const e of state.entries){
+    const memo=(e.memo||"").trim(); if(!memo) continue;
+    const {tags}=scanMemo(memo); if(!tags.length) continue;
+    if(!byCli.has(e.clientId)) byCli.set(e.clientId,[]);
+    for(const t of tags) byCli.get(e.clientId).push({kind:t.kind,label:t.label,ms:e.start,entryId:e.id});
+  }
+  const out=[];
+  for(const [cid,evs] of byCli){
+    evs.sort((a,b)=>a.ms-b.ms);
+    let open=[];
+    for(const ev of evs){
+      if(ev.kind==="hold"){ open.push({label:ev.label||"書類", ms:ev.ms, entryId:ev.entryId}); continue; }
+      if(!ev.label){ open=[]; continue; }                       // ラベルなしの返却＝全部戻した
+      const L=ev.label;
+      open=open.filter(o=>!(o.label.includes(L)||L.includes(o.label)));
+    }
+    for(const o of open) out.push({clientId:cid, label:o.label, ms:o.ms, entryId:o.entryId});
+  }
+  return out.sort((a,b)=>a.ms-b.ms);                            // 古い順＝放置が長いものが先頭
+}
+/* 顧問先ID → 預り中[] （1レンダーにつき1回だけ組んで使い回す） */
+function holdMap(){
+  const m=new Map();
+  for(const h of holdLedger()){ if(!m.has(h.clientId)) m.set(h.clientId,[]); m.get(h.clientId).push(h); }
+  return m;
+}
+/* 顧問先ID → 未完のやること[] */
+function todoMap(){
+  const m=new Map();
+  for(const e of state.entries){
+    const memo=(e.memo||"").trim(); if(!memo) continue;
+    const open=scanMemo(memo).todos.filter(t=>!t.done); if(!open.length) continue;
+    if(!m.has(e.clientId)) m.set(e.clientId,[]);
+    for(const t of open) m.get(e.clientId).push({text:t.text,ms:e.start,entryId:e.id,line:t.line});
+  }
+  for(const list of m.values()) list.sort((a,b)=>a.ms-b.ms);
+  return m;
+}
+function daysAgo(ms){ return Math.floor((startOfDay(new Date()).getTime()-startOfDay(new Date(ms)).getTime())/86400000); }
+function agoLabel(ms){ const d=daysAgo(ms); return d<=0?"今日":(d===1?"昨日":d+"日前"); }
+
+/* チェックの入れ外し（記録メモ／全体メモ） */
+function toggleTodoIn(getText,setText,lineIdx){
+  const lines=String(getText()||"").split(/\r?\n/);
+  if(lineIdx<0||lineIdx>=lines.length) return false;
+  const m=lines[lineIdx].match(/^(\s*[-*・]?\s*\[)([ xX])(\].*)$/);
+  if(!m) return false;
+  lines[lineIdx]=m[1]+(m[2].toLowerCase()==="x"?" ":"x")+m[3];
+  setText(lines.join("\n")); return true;
+}
+function toggleTodoEntry(entryId,lineIdx){
+  const e=state.entries.find(x=>x.id===entryId); if(!e) return false;
+  const ok=toggleTodoIn(()=>e.memo,v=>{e.memo=v;},lineIdx);
+  if(ok){ markDayDirty(e.start); save(); }
+  return ok;
+}
+function toggleTodoDay(key,lineIdx){
+  const ok=toggleTodoIn(()=>state.dayMemos[key],v=>{state.dayMemos[key]=v;},lineIdx);
+  if(ok){ markKeyDirty(key); save(); }
+  return ok;
+}
+
+/* ============================================================
    メモ（第3のビュー）— メモを主役に、横断して読み返す
 ============================================================ */
 let mePeriod="all";     // "month" | "prev" | "3m" | "all"
+let meMode="all";       // "all"(メモ) | "todo"(未完) | "hold"(預り中)
 let meGroup="date";     // "date"(日付) | "client"(顧問先) | "task"(業務)
 let meQ="";             // 検索語
 let meCli="";           // 顧問先で絞る（""=すべて）
@@ -2019,13 +2259,64 @@ function meCollect(){
   }
   return out.sort((a,b)=>b.ms-a.ms);                       // 新しい順
 }
+/* メモ本文を1行ずつ組む。やることはその場で押せるチェックに、#預り/#返却 は色を付ける */
+function tagHTML(raw,q){
+  return hlt(raw,q).replace(/#(預り|返却)/g,m=>`<span class="me-tag ${m==="#預り"?"hold":"back"}">${m}</span>`);
+}
+function meBodyHTML(memo,q,src){
+  return String(memo||"").split(/\r?\n/).map((raw,i)=>{
+    const m=raw.trim().match(RE_TODO);
+    if(m){
+      const done=m[1].toLowerCase()==="x";
+      return `<div class="me-todo${done?" done":""}" data-src="${src.kind}" data-id="${esc(String(src.id))}" data-line="${i}">`+
+             `<span class="me-box">${done?"✓":""}</span><span class="me-txt">${tagHTML(m[2],q)}</span></div>`;
+    }
+    return `<div class="me-line">${tagHTML(raw,q)}</div>`;
+  }).join("");
+}
+
+/* 預り台帳ボード：全顧問先を横断して「いま自分の手元にある現物」だけを並べる。
+   これが頭の中に置いておけない部分。期間は効かせない（未返却は時期に関係なく未返却） */
+function meHoldBoardHTML(){
+  const q=meQ.trim().toLowerCase();
+  let all=holdLedger();
+  if(meCli) all=all.filter(h=>h.clientId===meCli);
+  if(q) all=all.filter(h=>{
+    const c=getClient(h.clientId); const lab=(c.code?c.code+" ":"")+c.name;
+    return h.label.toLowerCase().includes(q)||lab.toLowerCase().includes(q);
+  });
+  const note=`<div class="hd-note">#預り より新しい #返却 がない＝まだ手元にあるもの。期間の絞り込みは効きません（未返却に期限はないため）。<br>
+    記録メモに <b>#預り 決算書一式</b> と書けば載り、<b>#返却</b>（ラベルなしでその顧問先を全部）または <b>#返却 決算書</b> で消えます。</div>`;
+  if(all.length===0){
+    return note+`<div class="hint" style="margin:20px 4px">${q||meCli?"該当する預りはありません。":"預かったままの書類はありません。"}</div>`;
+  }
+  const m=new Map();
+  for(const h of all){ if(!m.has(h.clientId)) m.set(h.clientId,[]); m.get(h.clientId).push(h); }
+  // 顧問先ごとに、いちばん古い預りが古い順＝放置が長いところが上
+  const order=[...m.entries()].sort((a,b)=>a[1][0].ms-b[1][0].ms);
+  let body=note;
+  for(const [cid,list] of order){
+    const c=getClient(cid);
+    body+=`<div class="hd-cli"><span class="me-dot" style="background:${c.color}"></span>
+      ${esc((c.code?c.code+" ":"")+c.name)}<span class="n">${list.length}件</span></div>`;
+    for(const h of list){
+      const d=new Date(h.ms), age=daysAgo(h.ms);
+      body+=`<div class="hd-row${age>=14?" stale":""}" data-ms="${h.ms}">
+        <span class="hd-label">${hlt(h.label,meQ)}</span>
+        <span class="hd-when">${d.getMonth()+1}/${d.getDate()}</span>
+        <span class="hd-age">${agoLabel(h.ms)}</span></div>`;
+    }
+  }
+  return body;
+}
+
 function meCardHTML(it){
   const d=new Date(it.ms);
   const date=`${d.getMonth()+1}/${d.getDate()}（${DOW[d.getDay()]}）`;
   if(it.kind==="day"){
     return `<div class="me-card day" data-ms="${it.ms}">
       <div class="me-top"><span class="me-date">${date}</span><span class="me-badge">申し送り</span></div>
-      <div class="me-body">${hlt(it.memo,meQ)}</div></div>`;
+      <div class="me-body">${meBodyHTML(it.memo,meQ,{kind:"day",id:it.key})}</div></div>`;
   }
   return `<div class="me-card" data-ms="${it.ms}">
     <div class="me-top">
@@ -2035,7 +2326,7 @@ function meCardHTML(it){
       <span class="me-task">${hlt(it.e.task||"(業務未設定)",meQ)}</span>
       <span class="me-time">${fmtTime(it.e.start)}–${it.e.end?fmtTime(it.e.end):"…"} · ${fmtDurShort(it.dur)}</span>
     </div>
-    <div class="me-body">${hlt(it.memo,meQ)}</div></div>`;
+    <div class="me-body">${meBodyHTML(it.memo,meQ,{kind:"entry",id:it.e.id})}</div></div>`;
 }
 function renderMemoView(){
   // 外枠は一度だけ組む（検索欄を作り直さない＝日本語入力の変換とカーソル位置を壊さない）
@@ -2043,6 +2334,8 @@ function renderMemoView(){
     .map(([k,l])=>`<button class="me-chip${mePeriod===k?" on":""}" data-p="${k}">${l}</button>`).join("");
   const groups=[["date","日付"],["client","顧問先"],["task","業務"]]
     .map(([k,l])=>`<button data-g="${k}" class="${meGroup===k?"on":""}">${l}</button>`).join("");
+  const modes=[["all","メモ"],["todo","未完"],["hold","預り中"]]
+    .map(([k,l])=>`<button data-m="${k}" class="${meMode===k?"on":""}">${l}</button>`).join("");
   // 絞り込みの選択肢は「メモが実在する顧問先・業務」だけを出す
   const cliSet=new Set(), taskSet=new Set();
   for(const e of state.entries) if((e.memo||"").trim()){ cliSet.add(e.clientId); taskSet.add(e.task||""); }
@@ -2059,7 +2352,8 @@ function renderMemoView(){
       <select class="me-sel" id="meCliSel">${cliOpts}</select>
       <select class="me-sel" id="meTaskSel">${taskOpts}</select>
     </div>
-    <div class="me-chips">${chips}<span style="flex:1"></span><span class="me-seg">${groups}</span></div>
+    <div class="me-chips" style="margin-bottom:10px"><span class="me-seg me-modes">${modes}</span></div>
+    <div class="me-chips" id="mePeriodRow">${chips}<span style="flex:1"></span><span class="me-seg me-groups">${groups}</span></div>
     <div class="me-meta" id="meMeta"></div>
     <div id="meList"></div>`;
 
@@ -2074,9 +2368,14 @@ function renderMemoView(){
     document.querySelectorAll("#memoInner .me-chip").forEach(x=>x.classList.toggle("on",x.dataset.p===mePeriod));
     renderMemoList();
   });
-  document.querySelectorAll("#memoInner .me-seg button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#memoInner .me-groups button").forEach(b=>b.onclick=()=>{
     meGroup=b.dataset.g;
-    document.querySelectorAll("#memoInner .me-seg button").forEach(x=>x.classList.toggle("on",x.dataset.g===meGroup));
+    document.querySelectorAll("#memoInner .me-groups button").forEach(x=>x.classList.toggle("on",x.dataset.g===meGroup));
+    renderMemoList();
+  });
+  document.querySelectorAll("#memoInner .me-modes button").forEach(b=>b.onclick=()=>{
+    meMode=b.dataset.m;
+    document.querySelectorAll("#memoInner .me-modes button").forEach(x=>x.classList.toggle("on",x.dataset.m===meMode));
     renderMemoList();
   });
   renderMemoList();
@@ -2084,11 +2383,27 @@ function renderMemoView(){
 
 /* 一覧とメタ情報だけを描き直す（検索欄・チップは触らない） */
 function renderMemoList(){
-  const items=meCollect();
+  // 預り中は台帳ボード。期間・グループの概念がないので早い段階で分岐する
+  const pr=document.getElementById("mePeriodRow"), ts=document.getElementById("meTaskSel");
+  if(pr) pr.style.display = meMode==="hold" ? "none" : "";     // 台帳に期間・グループは効かない
+  if(ts) ts.style.display = meMode==="hold" ? "none" : "";
+  if(meMode==="hold"){
+    document.getElementById("meList").innerHTML=meHoldBoardHTML();
+    const n=holdLedger().length, stale=holdLedger().filter(h=>daysAgo(h.ms)>=14).length;
+    document.getElementById("meMeta").innerHTML=
+      `預かったままの書類 ${n}件${stale?` ・ <b style="color:var(--shu)">14日以上 ${stale}件</b>`:""}`;
+    document.querySelectorAll("#meList .hd-row").forEach(el=>el.onclick=()=>{
+      selDate=startOfDay(new Date(Number(el.dataset.ms))); setView("log");
+    });
+    return;
+  }
+  let items=meCollect();
+  if(meMode==="todo") items=items.filter(it=>hasOpenTodo(it.memo));   // 未完のやることが残っているメモだけ
   const r=mePeriodRange();
   let body="";
   if(items.length===0){
-    body=`<div class="hint" style="margin:20px 4px">${meQ?`「${esc(meQ)}」に一致するメモはありません。`:`${r.label}のメモはありません。`}</div>`;
+    const what=meMode==="todo"?"未完のやること":"メモ";
+    body=`<div class="hint" style="margin:20px 4px">${meQ?`「${esc(meQ)}」に一致する${what}はありません。`:`${r.label}の${what}はありません。`}${meMode==="todo"?`<br><span style="font-size:11.5px">メモに <b>- [ ] 内容</b> と書くとここに集まります（メモ欄の「☐ やること」ボタンから入れられます）。</span>`:""}</div>`;
   }else if(meGroup==="date"){
     const cnt=new Map();
     for(const it of items){ const k=dateKey(new Date(it.ms)); cnt.set(k,(cnt.get(k)||0)+1); }
@@ -2115,12 +2430,20 @@ function renderMemoList(){
   document.getElementById("meList").innerHTML=body;
 
   const dayN=items.filter(x=>x.kind==="day").length;
+  let openN=0; for(const it of items) openN+=scanMemo(it.memo).todos.filter(t=>!t.done).length;
   document.getElementById("meMeta").innerHTML=
-    `${r.label} ・ ${items.length}件${dayN?`（うち申し送り ${dayN}件）`:""}${(meCli||meTask)?" ・ 絞り込み中は申し送りを除く":""}`+
+    `${r.label} ・ ${items.length}件${dayN?`（うち申し送り ${dayN}件）`:""}${meMode==="todo"?` ・ 未完 ${openN}件`:""}${(meCli||meTask)?" ・ 絞り込み中は申し送りを除く":""}`+
     `${items.length?`<button class="me-copy" id="meCopy">コピー</button>`:""}`;
 
   document.querySelectorAll("#meList .me-card").forEach(el=>el.onclick=()=>{
     selDate=startOfDay(new Date(Number(el.dataset.ms))); setView("log");
+  });
+  // チェックはその場で入れ外しできる（カードのジャンプに巻き込まれないよう止める）
+  document.querySelectorAll("#meList .me-todo").forEach(el=>el.onclick=ev=>{
+    ev.stopPropagation();
+    const line=Number(el.dataset.line);
+    const ok = el.dataset.src==="entry" ? toggleTodoEntry(el.dataset.id,line) : toggleTodoDay(el.dataset.id,line);
+    if(ok) renderMemoList();
   });
   const cp=document.getElementById("meCopy");
   if(cp) cp.onclick=()=>{
