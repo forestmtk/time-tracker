@@ -234,6 +234,8 @@
   .me-tag{font-weight:700;border-radius:4px;padding:0 4px;font-size:12.5px}
   .me-tag.hold{color:var(--shu);background:var(--shu-soft)}
   .me-tag.back{color:#2E7D6B;background:rgba(46,125,107,.10)}
+  .me-tag.issue{color:#2B5FA8;background:rgba(43,95,168,.10)}
+  .me-tag.judge{color:#6B4CA8;background:rgba(107,76,168,.11)}
 
   /* --- 預り台帳ボード --- */
   .hd-note{font-size:11.5px;color:var(--figure);margin:0 2px 10px;line-height:1.6}
@@ -253,6 +255,9 @@
   .hd-age{font-family:var(--font-mono);font-size:11.5px;font-weight:700;color:var(--ink-soft);flex:0 0 auto;min-width:52px;text-align:right}
   .hd-row.stale{background:var(--shu-soft)}
   .hd-row.stale .hd-age{color:var(--shu)}
+  .hd-row.issue{border-left-color:#2B5FA8}
+  .hd-row.judged{border-left-color:#6B4CA8;background:var(--paper-2)}
+  .hd-row.judged .hd-label{font-weight:500}
 
   /* --- 計測中の持ち越しブリーフ（記録画面の右上） --- */
   .brief{
@@ -268,8 +273,10 @@
   .brief-k{flex:0 0 auto;font-size:10.5px;font-weight:700;border-radius:4px;padding:1px 5px}
   .brief-k.hold{color:var(--shu);border:1px solid var(--shu)}
   .brief-k.todo{color:var(--ink-soft);border:1px solid var(--rule-strong)}
+  .brief-k.issue{color:#2B5FA8;border:1px solid #2B5FA8}
   .brief-t{font-size:12.5px;color:var(--ink);flex:1 1 auto;word-break:break-word}
   .brief-a{font-family:var(--font-mono);font-size:11px;color:var(--figure);flex:0 0 auto}
+  .brief-j{flex:0 0 auto;padding:2px 8px;border-radius:6px;border:1px solid #2B5FA8;background:var(--paper-2);font-size:10.5px;font-weight:700;color:#2B5FA8;cursor:pointer}
 
   /* --- メモ欄のワンタップ挿入 --- */
   .mm-btns{display:flex;gap:5px;margin:3px 0 0}
@@ -280,11 +287,14 @@
   }
   .mm-btn:hover{color:var(--ink);border-color:var(--ink)}
   .mm-btn.hold:hover{color:var(--shu);border-color:var(--shu)}
+  .mm-btn.issue:hover{color:#2B5FA8;border-color:#2B5FA8}
+  .mm-btn.judge:hover{color:#6B4CA8;border-color:#6B4CA8}
 
   /* --- 顧問先選択の持ち越しバッジ --- */
   .pick-flags{margin-left:auto;display:flex;gap:4px;flex:0 0 auto}
   .pick-flag{font-family:var(--font-mono);font-size:10px;font-weight:700;border-radius:5px;padding:1px 5px}
   .pick-flag.hold{color:var(--shu);border:1px solid var(--shu);background:var(--shu-soft)}
+  .pick-flag.issue{color:#2B5FA8;border:1px solid #2B5FA8;background:rgba(43,95,168,.09)}
   .pick-flag.todo{color:var(--ink-soft);border:1px solid var(--rule-strong)}
   @media(max-width:900px){
     .me-cli{max-width:150px}
@@ -1178,7 +1188,7 @@ function renderClientPicker(){
     <div id="cliList"></div>`;
   const inp=document.getElementById("cliSearch");
   const draw=()=>{
-    _pickHM=holdMap(); _pickTM=todoMap();   // 1回だけ組んで全行で使い回す
+    _pickHM=holdMap(); _pickTM=todoMap(); _pickIM=issueMap();   // 1回だけ組んで全行で使い回す
     const q=(inp.value||"").trim().toLowerCase();
     const list=document.getElementById("cliList"); list.innerHTML="";
     const specials=state.clients.filter(c=>c.kind!=="client");
@@ -1196,13 +1206,14 @@ function renderClientPicker(){
   };
   inp.oninput=draw; draw();
 }
-let _pickHM=null,_pickTM=null;   // 顧問先選択で使う持ち越しの下ごしらえ
+let _pickHM=null,_pickTM=null,_pickIM=null;   // 顧問先選択で使う持ち越しの下ごしらえ
 function pickRow(c,special){
   const b=document.createElement("button");
   b.className="pick"+(special?" special":"");
   const nh=(_pickHM&&_pickHM.get(c.id)||[]).length;
   const nt=(_pickTM&&_pickTM.get(c.id)||[]).length;
-  const flags=(nh||nt)?`<span class="pick-flags">${nh?`<span class="pick-flag hold">預${nh}</span>`:""}${nt?`<span class="pick-flag todo">未${nt}</span>`:""}</span>`:"";
+  const ni=(_pickIM&&_pickIM.get(c.id)||[]).length;
+  const flags=(nh||nt||ni)?`<span class="pick-flags">${nh?`<span class="pick-flag hold">預${nh}</span>`:""}${ni?`<span class="pick-flag issue">論${ni}</span>`:""}${nt?`<span class="pick-flag todo">未${nt}</span>`:""}</span>`:"";
   b.innerHTML=`<span class="dot" style="background:${c.color}"></span>
     <span class="code mono">${esc(c.code)}</span>
     <span class="nm">${esc(c.name)}</span>${flags}`;
@@ -1463,7 +1474,7 @@ function autoGrow(t){ t.style.height="auto"; t.style.height=Math.max(32,t.scroll
 function buildMemoBtns(host,ta,commit,withHold){
   host.innerHTML="";
   const defs=[["☐ やること","- [ ] ",""]];
-  if(withHold){ defs.push(["#預り","#預り ","hold"],["#返却","#返却 ","hold"]); }
+  if(withHold){ defs.push(["#預り","#預り ","hold"],["#返却","#返却 ","hold"],["#論点","#論点 ","issue"],["#判断","#判断 ","judge"]); }
   for(const [label,snippet,cls] of defs){
     const b=document.createElement("button");
     b.type="button"; b.className="mm-btn"+(cls?" "+cls:""); b.textContent=label;
@@ -1486,26 +1497,49 @@ function renderBrief(){
   if(!run || !isSameDay(new Date(run.start),selDate)) return;
   const c=getClient(run.clientId);
   const holds=holdMap().get(run.clientId)||[];
+  const issues=issueMap().get(run.clientId)||[];
   const todos=(todoMap().get(run.clientId)||[]).filter(t=>t.entryId!==run.id);
-  if(!holds.length && !todos.length) return;
+  if(!holds.length && !issues.length && !todos.length) return;
 
   const rows=[]
     .concat(holds.map(h=>({k:"hold",label:"預り",text:h.label,ms:h.ms})))
+    .concat(issues.map(x=>({k:"issue",label:"論点",text:x.label,ms:x.ms})))
     .concat(todos.map(t=>({k:"todo",label:"未完",text:t.text||"(内容なし)",ms:t.ms})));
 
   const box=document.createElement("div"); box.className="brief";
   box.innerHTML=`<div class="brief-h">
       <span class="t">前回までの持ち越し</span>
       <span class="c">${esc((c.code?c.code+" ":"")+c.name)}</span>
+      <button class="hist" id="briefMat">報告材料</button>
       <button class="hist" id="briefHist">履歴</button>
     </div>`+
     rows.map(r=>`<div class="brief-row" data-ms="${r.ms}">
       <span class="brief-k ${r.k}">${r.label}</span>
       <span class="brief-t">${esc(r.text)}</span>
+      ${r.k==="issue"?`<button class="brief-j" data-label="${esc(r.text)}">判断</button>`:""}
       <span class="brief-a">${agoLabel(r.ms)}</span></div>`).join("");
   slot.appendChild(box);
 
   box.querySelector("#briefHist").onclick=ev=>{ ev.stopPropagation(); openClientHistory(run.clientId); };
+  box.querySelector("#briefMat").onclick=ev=>{
+    ev.stopPropagation();
+    const d=startOfDay(selDate), s0=d.getTime(), e0=s0+86400000;
+    const lab=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}（${DOW[d.getDay()]}）`;
+    copyText(buildAuditMaterial(run.clientId,s0,e0,lab),null);
+  };
+  box.querySelectorAll(".brief-j").forEach(b=>b.onclick=ev=>{
+    ev.stopPropagation();
+    // 進行中の記録に「#判断 <論点> → 」を差し込む。宛先が今日の記録なので日付が正しく残る
+    const ta=document.querySelector(`.log-row[data-id="${run.id}"] .log-memo`)
+          || [...document.querySelectorAll(".log-memo")].pop();
+    const snippet=`#判断 ${b.dataset.label} → `;
+    const v=run.memo||"";
+    run.memo=v+(v.length&&!/\n$/.test(v)?"\n":"")+snippet;
+    markDayDirty(run.start); save(); renderAll();
+    const ta2=document.querySelector(`.log-row[data-id="${run.id}"] .log-memo`);
+    if(ta2){ ta2.focus(); const p=ta2.value.length; ta2.setSelectionRange(p,p); autoGrow(ta2); }
+    toast("判断を書き込んでください");
+  });
   box.querySelectorAll(".brief-row").forEach(el=>el.onclick=()=>{
     selDate=startOfDay(new Date(Number(el.dataset.ms))); renderAll(); scrollToRelevant();
   });
@@ -2123,9 +2157,17 @@ function chRange(){
    郵送は送付書が残るので追える。持参のときに欠けるのが「向きの記録」で、そこを埋めるのが #預り/#返却。
 ============================================================ */
 const RE_TODO=/^[-*・]?\s*\[([ xX])\]\s*(.*)$/;
-const RE_TAG=/#(預り|返却)\s*(.*)$/;
+const RE_TAG=/#(預り|返却|論点|判断)\s*(.*)$/;
 
-/* メモ1件を走査して、やること と 預り/返却 を取り出す */
+/* タグは2対だけ。「開く」タグは、対応する「閉じる」タグが来るまで未処理として残り続ける。
+   預り→返却 … 現物書類の向き（いま手元にあるか）
+   論点→判断 … 判断の履歴（事実は古くなるが、判断とその根拠は古くならない） */
+const TAG_PAIRS=[
+  {key:"hold", open:"預り", close:"返却", noun:"預り",   fallback:"書類"},
+  {key:"issue",open:"論点", close:"判断", noun:"論点",   fallback:"論点"},
+];
+
+/* メモ1件を走査して、やること と タグを取り出す */
 function scanMemo(text){
   const todos=[], tags=[];
   String(text||"").split(/\r?\n/).forEach((raw,i)=>{
@@ -2133,44 +2175,65 @@ function scanMemo(text){
     const m=ln.match(RE_TODO);
     if(m) todos.push({done:m[1].toLowerCase()==="x", text:m[2].trim(), line:i});
     const g=ln.match(RE_TAG);
-    if(g) tags.push({kind:g[1]==="預り"?"hold":"back", label:g[2].trim().replace(/^[-–—:：]\s*/,""), line:i});
+    if(g) tags.push({tag:g[1], label:g[2].trim().replace(/^[-–—:：]\s*/,""), line:i});
   });
   return {todos,tags};
 }
 function hasOpenTodo(text){ return scanMemo(text).todos.some(t=>!t.done); }
 
-/* 預り台帳：#預り と #返却 を顧問先ごとに突き合わせ、いま手元にあるものだけ残す
-   ・#預り X … Xを預かった（Xが空なら「書類」）
-   ・#返却   … ラベルなし＝その顧問先の預りを全部閉じる
-   ・#返却 X … Xに一致する預りだけ閉じる（部分一致・双方向）。一致しなければ何も閉じない */
-function holdLedger(){
+/* 対になったタグの突き合わせ（預り/返却 と 論点/判断 で共通）
+   ・#開く X   … Xを開く（Xが空なら fallback）
+   ・#閉じる   … ラベルなし＝その顧問先の同種を全部閉じる
+   ・#閉じる X … Xに一致するものだけ閉じる（部分一致・双方向）。一致しなければ何も閉じない */
+function pairLedger(pair){
   const byCli=new Map();
   for(const e of state.entries){
     const memo=(e.memo||"").trim(); if(!memo) continue;
-    const {tags}=scanMemo(memo); if(!tags.length) continue;
+    const {tags}=scanMemo(memo);
+    const rel=tags.filter(t=>t.tag===pair.open||t.tag===pair.close);
+    if(!rel.length) continue;
     if(!byCli.has(e.clientId)) byCli.set(e.clientId,[]);
-    for(const t of tags) byCli.get(e.clientId).push({kind:t.kind,label:t.label,ms:e.start,entryId:e.id});
+    for(const t of rel) byCli.get(e.clientId).push({tag:t.tag,label:t.label,ms:e.start,entryId:e.id});
   }
   const out=[];
   for(const [cid,evs] of byCli){
     evs.sort((a,b)=>a.ms-b.ms);
     let open=[];
     for(const ev of evs){
-      if(ev.kind==="hold"){ open.push({label:ev.label||"書類", ms:ev.ms, entryId:ev.entryId}); continue; }
-      if(!ev.label){ open=[]; continue; }                       // ラベルなしの返却＝全部戻した
+      if(ev.tag===pair.open){ open.push({label:ev.label||pair.fallback, ms:ev.ms, entryId:ev.entryId}); continue; }
+      // 同じメモの中に開いたものがあれば、それを閉じる（論点と判断を一緒に書いたとき）
+      const same=open.findIndex(o=>o.entryId===ev.entryId);
+      if(same>=0){ open.splice(same,1); continue; }
+      if(!ev.label){ open=[]; continue; }
       const L=ev.label;
       open=open.filter(o=>!(o.label.includes(L)||L.includes(o.label)));
     }
     for(const o of open) out.push({clientId:cid, label:o.label, ms:o.ms, entryId:o.entryId});
   }
-  return out.sort((a,b)=>a.ms-b.ms);                            // 古い順＝放置が長いものが先頭
+  return out.sort((a,b)=>a.ms-b.ms);      // 古い順＝放置が長いものが先頭
 }
-/* 顧問先ID → 預り中[] （1レンダーにつき1回だけ組んで使い回す） */
-function holdMap(){
+function holdLedger(){  return pairLedger(TAG_PAIRS[0]); }   // まだ手元にある現物
+function issueLedger(){ return pairLedger(TAG_PAIRS[1]); }   // まだ判断が出ていない論点
+function byClient(list){
   const m=new Map();
-  for(const h of holdLedger()){ if(!m.has(h.clientId)) m.set(h.clientId,[]); m.get(h.clientId).push(h); }
+  for(const x of list){ if(!m.has(x.clientId)) m.set(x.clientId,[]); m.get(x.clientId).push(x); }
   return m;
 }
+function holdMap(){  return byClient(holdLedger()); }
+function issueMap(){ return byClient(issueLedger()); }
+
+/* 判断の履歴：#判断 の行を全部、新しい順。これが年をまたいで効く資産なので消さない */
+function decisionLog(){
+  const out=[];
+  for(const e of state.entries){
+    const memo=(e.memo||"").trim(); if(!memo) continue;
+    for(const t of scanMemo(memo).tags){
+      if(t.tag==="判断"&&t.label) out.push({clientId:e.clientId,label:t.label,ms:e.start,entryId:e.id});
+    }
+  }
+  return out.sort((a,b)=>b.ms-a.ms);
+}
+
 /* 顧問先ID → 未完のやること[] */
 function todoMap(){
   const m=new Map();
@@ -2260,8 +2323,9 @@ function meCollect(){
   return out.sort((a,b)=>b.ms-a.ms);                       // 新しい順
 }
 /* メモ本文を1行ずつ組む。やることはその場で押せるチェックに、#預り/#返却 は色を付ける */
+const TAG_CLS={"#預り":"hold","#返却":"back","#論点":"issue","#判断":"judge"};
 function tagHTML(raw,q){
-  return hlt(raw,q).replace(/#(預り|返却)/g,m=>`<span class="me-tag ${m==="#預り"?"hold":"back"}">${m}</span>`);
+  return hlt(raw,q).replace(/#(預り|返却|論点|判断)/g,m=>`<span class="me-tag ${TAG_CLS[m]}">${m}</span>`);
 }
 function meBodyHTML(memo,q,src){
   return String(memo||"").split(/\r?\n/).map((raw,i)=>{
@@ -2275,36 +2339,64 @@ function meBodyHTML(memo,q,src){
   }).join("");
 }
 
-/* 預り台帳ボード：全顧問先を横断して「いま自分の手元にある現物」だけを並べる。
-   これが頭の中に置いておけない部分。期間は効かせない（未返却は時期に関係なく未返却） */
-function meHoldBoardHTML(){
+/* 台帳ボード：全顧問先を横断して、まだ閉じていないものだけを並べる。
+   これが頭の中に置いておけない部分。期間は効かせない（未処理に期限はない） */
+function meLedgerBoardHTML(kind){
+  const isHold=kind==="hold";
+  const pair=isHold?TAG_PAIRS[0]:TAG_PAIRS[1];
   const q=meQ.trim().toLowerCase();
-  let all=holdLedger();
+  let all=isHold?holdLedger():issueLedger();
   if(meCli) all=all.filter(h=>h.clientId===meCli);
-  if(q) all=all.filter(h=>{
-    const c=getClient(h.clientId); const lab=(c.code?c.code+" ":"")+c.name;
-    return h.label.toLowerCase().includes(q)||lab.toLowerCase().includes(q);
-  });
-  const note=`<div class="hd-note">#預り より新しい #返却 がない＝まだ手元にあるもの。期間の絞り込みは効きません（未返却に期限はないため）。<br>
-    記録メモに <b>#預り 決算書一式</b> と書けば載り、<b>#返却</b>（ラベルなしでその顧問先を全部）または <b>#返却 決算書</b> で消えます。</div>`;
-  if(all.length===0){
-    return note+`<div class="hint" style="margin:20px 4px">${q||meCli?"該当する預りはありません。":"預かったままの書類はありません。"}</div>`;
-  }
-  const m=new Map();
-  for(const h of all){ if(!m.has(h.clientId)) m.set(h.clientId,[]); m.get(h.clientId).push(h); }
-  // 顧問先ごとに、いちばん古い預りが古い順＝放置が長いところが上
-  const order=[...m.entries()].sort((a,b)=>a[1][0].ms-b[1][0].ms);
+  const hit=x=>{
+    if(!q) return true;
+    const c=getClient(x.clientId); const lab=(c.code?c.code+" ":"")+c.name;
+    return x.label.toLowerCase().includes(q)||lab.toLowerCase().includes(q);
+  };
+  all=all.filter(hit);
+
+  const note=isHold
+    ? `<div class="hd-note"><b>#預り</b> より新しい <b>#返却</b> がない＝まだ手元にあるもの。<br>
+        <b>#返却</b>（ラベルなしでその顧問先を全部）または <b>#返却 決算書</b> で閉じます。期間の絞り込みは効きません。</div>`
+    : `<div class="hd-note"><b>#論点</b> より新しい <b>#判断</b> がない＝まだ答えを出していないもの。<br>
+        閉じるときは <b>#判断 役員報酬の改定時期 → 通常改定で6月末まで（法法34①一）</b> のように
+        <b>論点のラベルを先に書いて、答えと根拠を続けます</b>（何への答えかが残り、対応付けも効きます）。<br>
+        同じメモに <b>#論点</b> と <b>#判断</b> を並べて書いた場合は、その場で閉じます。期間の絞り込みは効きません。</div>`;
+
   let body=note;
-  for(const [cid,list] of order){
-    const c=getClient(cid);
-    body+=`<div class="hd-cli"><span class="me-dot" style="background:${c.color}"></span>
-      ${esc((c.code?c.code+" ":"")+c.name)}<span class="n">${list.length}件</span></div>`;
-    for(const h of list){
-      const d=new Date(h.ms), age=daysAgo(h.ms);
-      body+=`<div class="hd-row${age>=14?" stale":""}" data-ms="${h.ms}">
-        <span class="hd-label">${hlt(h.label,meQ)}</span>
-        <span class="hd-when">${d.getMonth()+1}/${d.getDate()}</span>
-        <span class="hd-age">${agoLabel(h.ms)}</span></div>`;
+  if(all.length===0){
+    body+=`<div class="hint" style="margin:18px 4px">${q||meCli
+      ? `該当する${pair.noun}はありません。`
+      : (isHold?"預かったままの書類はありません。":"未解決の論点はありません。")}</div>`;
+  }else{
+    const m=byClient(all);
+    const order=[...m.entries()].sort((a,b)=>a[1][0].ms-b[1][0].ms);
+    for(const [cid,list] of order){
+      const c=getClient(cid);
+      body+=`<div class="hd-cli"><span class="me-dot" style="background:${c.color}"></span>
+        ${esc((c.code?c.code+" ":"")+c.name)}<span class="n">${list.length}件</span></div>`;
+      for(const h of list){
+        const d=new Date(h.ms), age=daysAgo(h.ms), stale=isHold?age>=14:age>=30;
+        body+=`<div class="hd-row${stale?" stale":""}${isHold?"":" issue"}" data-ms="${h.ms}">
+          <span class="hd-label">${hlt(h.label,meQ)}</span>
+          <span class="hd-when">${d.getMonth()+1}/${d.getDate()}</span>
+          <span class="hd-age">${agoLabel(h.ms)}</span></div>`;
+      }
+    }
+  }
+
+  // 判断の履歴は論点モードにだけ添える（閉じたあとも読み返す資産なので）
+  if(!isHold){
+    let log=decisionLog();
+    if(meCli) log=log.filter(x=>x.clientId===meCli);
+    log=log.filter(hit);
+    body+=`<div class="hd-cli" style="margin-top:24px">判断の履歴<span class="n">${log.length}件</span></div>`;
+    if(!log.length) body+=`<div class="hint" style="margin:14px 4px">まだありません。<b>#判断</b> で残したものが、翌年ここから読み返せます。</div>`;
+    else for(const x of log){
+      const c=getClient(x.clientId), d=new Date(x.ms);
+      body+=`<div class="hd-row judged" data-ms="${x.ms}">
+        <span class="hd-label">${hlt(x.label,meQ)}</span>
+        <span class="hd-when">${esc(c.code||c.name)}</span>
+        <span class="hd-age">${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}</span></div>`;
     }
   }
   return body;
@@ -2334,7 +2426,7 @@ function renderMemoView(){
     .map(([k,l])=>`<button class="me-chip${mePeriod===k?" on":""}" data-p="${k}">${l}</button>`).join("");
   const groups=[["date","日付"],["client","顧問先"],["task","業務"]]
     .map(([k,l])=>`<button data-g="${k}" class="${meGroup===k?"on":""}">${l}</button>`).join("");
-  const modes=[["all","メモ"],["todo","未完"],["hold","預り中"]]
+  const modes=[["all","メモ"],["todo","未完"],["hold","預り"],["issue","論点"]]
     .map(([k,l])=>`<button data-m="${k}" class="${meMode===k?"on":""}">${l}</button>`).join("");
   // 絞り込みの選択肢は「メモが実在する顧問先・業務」だけを出す
   const cliSet=new Set(), taskSet=new Set();
@@ -2385,13 +2477,20 @@ function renderMemoView(){
 function renderMemoList(){
   // 預り中は台帳ボード。期間・グループの概念がないので早い段階で分岐する
   const pr=document.getElementById("mePeriodRow"), ts=document.getElementById("meTaskSel");
-  if(pr) pr.style.display = meMode==="hold" ? "none" : "";     // 台帳に期間・グループは効かない
-  if(ts) ts.style.display = meMode==="hold" ? "none" : "";
-  if(meMode==="hold"){
-    document.getElementById("meList").innerHTML=meHoldBoardHTML();
-    const n=holdLedger().length, stale=holdLedger().filter(h=>daysAgo(h.ms)>=14).length;
-    document.getElementById("meMeta").innerHTML=
-      `預かったままの書類 ${n}件${stale?` ・ <b style="color:var(--shu)">14日以上 ${stale}件</b>`:""}`;
+  const board = meMode==="hold"||meMode==="issue";
+  if(pr) pr.style.display = board ? "none" : "";     // 台帳に期間・グループは効かない
+  if(ts) ts.style.display = board ? "none" : "";
+  if(meMode==="hold"||meMode==="issue"){
+    document.getElementById("meList").innerHTML=meLedgerBoardHTML(meMode);
+    if(meMode==="hold"){
+      const L=holdLedger(), stale=L.filter(h=>daysAgo(h.ms)>=14).length;
+      document.getElementById("meMeta").innerHTML=
+        `預かったままの書類 ${L.length}件${stale?` ・ <b style="color:var(--shu)">14日以上 ${stale}件</b>`:""}`;
+    }else{
+      const L=issueLedger(), stale=L.filter(h=>daysAgo(h.ms)>=30).length;
+      document.getElementById("meMeta").innerHTML=
+        `未解決の論点 ${L.length}件${stale?` ・ <b style="color:var(--shu)">30日以上 ${stale}件</b>`:""} ・ 判断の履歴 ${decisionLog().length}件`;
+    }
     document.querySelectorAll("#meList .hd-row").forEach(el=>el.onclick=()=>{
       selDate=startOfDay(new Date(Number(el.dataset.ms))); setView("log");
     });
@@ -2520,11 +2619,12 @@ function drawClientHistory(c){
       <span class="ch-name">${esc((c.code?c.code+" ":"")+c.name)}</span>
       <span class="ch-total">${fmtDur(total)}</span>
     </div>
-    <div class="ch-chips">${chips}</div>
+    <div class="ch-chips">${chips}<span style="flex:1"></span><button class="me-copy" id="chMat">報告材料</button></div>
     <div class="ch-views">${views}</div>
     <div id="chBody">${body}</div>`;
 
   document.getElementById("chBack").onclick=closeSheet;
+  document.getElementById("chMat").onclick=()=>copyText(buildAuditMaterial(c.id,r.s,r.e,r.label),null);
   sheetBody.querySelectorAll(".ch-chip").forEach(b=>b.onclick=()=>{ chPeriod=b.dataset.p; drawClientHistory(c); });
   sheetBody.querySelectorAll(".ch-views button").forEach(b=>b.onclick=()=>{ chView=b.dataset.v; drawClientHistory(c); });
   sheetBody.querySelectorAll(".ch-row[data-id]").forEach(el=>el.onclick=()=>openEditEntry(el.dataset.id));
@@ -2537,6 +2637,98 @@ function drawClientHistory(c){
     copyText(L.join("\n"),null);
   };
 }
+/* ============================================================
+   報告材料の組み立て（所内・所長への報告記録むけ）
+   報告書に時間がかかるのは「書く」ことではなく「思い出す」こと。
+   思い出す部分＝作業内訳・宿題・預り・経緯 をアプリ側で機械的に揃える。
+   文章化だけを Claude に渡せるよう、指示文を先頭に同梱しておく。
+============================================================ */
+function buildAuditMaterial(clientId, s, e, label){
+  const now=Date.now();
+  const c=getClient(clientId);
+  const cli=(c.code?c.code+" ":"")+c.name;
+  const rows=state.entries
+    .filter(x=>x.clientId===clientId && x.start>=s && x.start<e)
+    .sort((a,b)=>a.start-b.start);
+
+  let total=0, travel=0; const daySet=new Set(); const byTask=new Map();
+  for(const x of rows){
+    const m=((x.end||now)-x.start)/60000; total+=m;
+    if(isTravelTask(x.task)) travel+=m;
+    daySet.add(dateKey(new Date(x.start)));
+    const k=x.task||"(業務未設定)"; byTask.set(k,(byTask.get(k)||0)+m);
+  }
+
+  const L=[];
+  L.push(`# 報告材料 ${cli} ／ ${label}`,"");
+  L.push("## この材料の使いかた（Claudeへの指示）");
+  L.push("所内・所長あての報告記録を作成してください。条件は次のとおりです。");
+  L.push("- 下記の事実のみを根拠にすること。推測で数値・結論・所見を足さないこと");
+  L.push("- 判断がつかない箇所は補わず「要確認」と明記すること");
+  L.push("- 構成は「当日の対応 → 決算・数値の状況 → 判断を仰ぎたい点 → 持ち越し」");
+  L.push("- 顧問先に見せる文体ではなく、所内記録として簡潔に","");
+
+  L.push("## 稼働");
+  if(rows.length===0){ L.push("（この期間の記録なし）",""); }
+  else{
+    L.push(`合計 ${fmtDur(total)}（稼働${daySet.size}日・${rows.length}件${travel>0?`・うち移動 ${fmtDur(travel)}`:""}）`);
+    for(const [t,m] of [...byTask.entries()].sort((a,b)=>b[1]-a[1])) L.push(`- ${t} … ${fmtDur(m)}`);
+    L.push("");
+    L.push("### 作業の記録");
+    let cur="";
+    for(const x of rows){
+      const d=new Date(x.start), k=dateKey(d);
+      if(k!==cur){ cur=k; L.push("",`**${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}（${DOW[d.getDay()]}）**`); }
+      const end=x.end||now;
+      L.push(`- ${fmtTime(x.start)}–${x.end?fmtTime(end):"進行中"}（${fmtDur((end-x.start)/60000)}）${x.task||"(業務未設定)"}`);
+      String(x.memo||"").split(/\r?\n/).forEach(ln=>{
+        const t=ln.trim(); if(!t) return;
+        L.push(/^[-*・]/.test(t) ? "  "+t : "  - "+t);   // 既に箇条書きなら二重にしない
+      });
+    }
+    L.push("");
+  }
+
+  // 未完のやること（期間外に書かれたものも持ち越しとして拾う）
+  const todos=todoMap().get(clientId)||[];
+  L.push("## 次回までの宿題（未完）");
+  if(!todos.length) L.push("（なし）");
+  else for(const t of todos) L.push(`- [ ] ${t.text||"(内容なし)"}（${dateKey(new Date(t.ms))} 記録・${agoLabel(t.ms)}）`);
+  L.push("");
+
+  const holds=holdMap().get(clientId)||[];
+  L.push("## お預かり中の書類");
+  if(!holds.length) L.push("（なし）");
+  else for(const h of holds) L.push(`- ${h.label} … ${dateKey(new Date(h.ms))} お預かり・${agoLabel(h.ms)}${daysAgo(h.ms)>=14?" ★14日以上":""}`);
+  L.push("");
+
+  const issues=issueMap().get(clientId)||[];
+  L.push("## 未解決の論点（判断待ち）");
+  if(!issues.length) L.push("（なし）");
+  else for(const x of issues) L.push(`- ${x.label}（${dateKey(new Date(x.ms))} 提起・${agoLabel(x.ms)}）`);
+  L.push("");
+
+  const dec=decisionLog().filter(x=>x.clientId===clientId && x.ms>=s && x.ms<e);
+  L.push("## この期間に出した判断");
+  if(!dec.length) L.push("（なし）");
+  else for(const x of dec) L.push(`- ${x.label}（${dateKey(new Date(x.ms))}）`);
+  L.push("");
+
+  const past=decisionLog().filter(x=>x.clientId===clientId && x.ms<s).slice(0,8);
+  if(past.length){
+    L.push("## 過去の判断（参考・新しい順）");
+    for(const x of past) L.push(`- ${x.label}（${dateKey(new Date(x.ms))}）`);
+    L.push("");
+  }
+
+  L.push("## 決算・数値の状況");
+  L.push("（kessan_app の「Claude用エクスポート」をこの下に貼り付ける。無ければ「今回は数値なし」と書く）");
+  L.push("");
+  L.push("## 補足・所見（手入力）");
+  L.push("（自動では拾えない口頭のやりとり・先方の反応・判断を仰ぎたい点があればここに）");
+  return L.join("\n");
+}
+
 function chRowHTML(e,now,withDate){
   const end=e.end||now; const dur=(end-e.start)/60000;
   const d=new Date(e.start);
