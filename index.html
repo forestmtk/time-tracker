@@ -276,6 +276,17 @@
   .brief-k.issue{color:#2B5FA8;border:1px solid #2B5FA8}
   .brief-t{font-size:12.5px;color:var(--ink);flex:1 1 auto;word-break:break-word}
   .brief-a{font-family:var(--font-mono);font-size:11px;color:var(--figure);flex:0 0 auto}
+  .brief.overview .brief-h{margin-bottom:8px}
+  .ov-pills{display:flex;flex-wrap:wrap;gap:7px}
+  .ov-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9px;
+    border:1px solid var(--rule-strong);background:var(--paper-2);
+    font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:box-shadow .12s}
+  .ov-pill:hover{box-shadow:var(--shadow)}
+  .ov-pill.stale{border-color:var(--shu);color:var(--shu)}
+  .ov-k{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+  .ov-k.hold{background:var(--shu)}
+  .ov-k.issue{background:#2B5FA8}
+  .ov-k.todo{background:var(--ink-soft)}
   .brief-j{flex:0 0 auto;padding:2px 8px;border-radius:6px;border:1px solid #2B5FA8;background:var(--paper-2);font-size:10.5px;font-weight:700;color:#2B5FA8;cursor:pointer}
 
   /* --- メモ欄のワンタップ挿入 --- */
@@ -447,6 +458,12 @@
   .hint{font-size:12px;color:var(--figure);margin:6px 4px}
   .tasklist-item{display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--rule)}
   .tasklist-item .nm{flex:1}
+  .tasklist-item .ord{display:flex;flex-direction:column;gap:2px;flex:0 0 auto}
+  .tasklist-item .mv{width:26px;height:18px;display:flex;align-items:center;justify-content:center;
+    border:1px solid var(--rule-strong);border-radius:5px;background:var(--paper-2);
+    font-size:9px;color:var(--figure);cursor:pointer;line-height:1}
+  .tasklist-item .mv:hover:not(:disabled){color:var(--ink);border-color:var(--ink)}
+  .tasklist-item .mv:disabled{opacity:.28;cursor:default}
   .tasklist-item .x{color:var(--shu);padding:6px 9px;border-radius:7px;font-size:16px}
   .tasklist-item .x:hover{background:var(--shu-soft)}
   .add-inline{display:flex;gap:8px;margin-top:8px}
@@ -1494,7 +1511,31 @@ function renderBrief(){
   const slot=document.getElementById("briefSlot"); if(!slot) return;
   slot.innerHTML="";
   const run=runningEntry();
-  if(!run || !isSameDay(new Date(run.start),selDate)) return;
+
+  // 計測していない＝顧問先が定まらない朝は、全顧問先横断の持ち越しサマリを出す。
+  // 特定の顧問先を開かないと持ち越しに気づけない、という取りこぼしをここで塞ぐ。
+  if(!run || !isSameDay(new Date(run.start),selDate)){
+    if(!isSameDay(selDate,new Date())) return;   // 今日の画面でだけ出す（過去日を遡って見ているときは邪魔）
+    const holdN=holdLedger().length, holdStale=holdLedger().filter(h=>daysAgo(h.ms)>=14).length;
+    const issN=issueLedger().length, issStale=issueLedger().filter(h=>daysAgo(h.ms)>=30).length;
+    let todoN=0; for(const l of todoMap().values()) todoN+=l.length;
+    if(!holdN && !issN && !todoN) return;
+
+    const pill=(cls,txt,mode,stale)=>`<button class="ov-pill${stale?" stale":""}" data-mode="${mode}">
+        <span class="ov-k ${cls}"></span>${txt}</button>`;
+    const box=document.createElement("div"); box.className="brief overview";
+    box.innerHTML=`<div class="brief-h"><span class="t">持ち越し（全顧問先）</span>
+        <span class="c">計測を始めると、その顧問先ぶんがここに出ます</span></div>
+      <div class="ov-pills">
+        ${holdN?pill("hold",`預り ${holdN}件${holdStale?`（14日↑ ${holdStale}）`:""}`,"hold",holdStale):""}
+        ${issN?pill("issue",`論点 ${issN}件${issStale?`（30日↑ ${issStale}）`:""}`,"issue",issStale):""}
+        ${todoN?pill("todo",`未完 ${todoN}件`,"todo",false):""}
+      </div>`;
+    slot.appendChild(box);
+    box.querySelectorAll(".ov-pill").forEach(b=>b.onclick=()=>setView("memo",b.dataset.mode));
+    return;
+  }
+
   const c=getClient(run.clientId);
   const holds=holdMap().get(run.clientId)||[];
   const issues=issueMap().get(run.clientId)||[];
@@ -1850,9 +1891,10 @@ let appView="log";            // "log"(記録) | "analysis"(ふりかえり) | "
 let anaMonth=null;            // 表示中の月（1日固定）
 let anaSelDay=null;           // 日詳細パネルで選択中の日（"YYYY-MM-DD"）
 
-function setView(v){
+function setView(v,memoMode){
   appView=v;
   const isAna=v==="analysis", isMemo=v==="memo";
+  if(isMemo && memoMode) meMode=memoMode;   // 全体サマリから該当モードを開くとき
   if(isAna && !anaMonth) anaMonth=new Date(selDate.getFullYear(),selDate.getMonth(),1);
   document.body.classList.toggle("mode-analysis",isAna);
   document.body.classList.toggle("mode-memo",isMemo);
@@ -2876,7 +2918,13 @@ function taskPaneRender(k){
   const items=document.getElementById("taskItems");
   list.forEach((t,i)=>{
     const row=document.createElement("div"); row.className="tasklist-item";
-    row.innerHTML=`<span class="nm">${esc(t)}</span><button class="x" aria-label="削除">×</button>`;
+    row.innerHTML=`<span class="ord">
+        <button class="mv up" aria-label="上へ"${i===0?" disabled":""}>▲</button>
+        <button class="mv dn" aria-label="下へ"${i===list.length-1?" disabled":""}>▼</button>
+      </span>
+      <span class="nm">${esc(t)}</span><button class="x" aria-label="削除">×</button>`;
+    row.querySelector(".up").onclick=()=>{ if(i>0){ [list[i-1],list[i]]=[list[i],list[i-1]]; save(); taskPaneRender(k); } };
+    row.querySelector(".dn").onclick=()=>{ if(i<list.length-1){ [list[i+1],list[i]]=[list[i],list[i+1]]; save(); taskPaneRender(k); } };
     row.querySelector(".x").onclick=()=>{ list.splice(i,1); save(); taskPaneRender(k); };
     items.appendChild(row);
   });
