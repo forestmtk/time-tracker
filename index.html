@@ -288,6 +288,13 @@
   .ov-k.issue{background:#2B5FA8}
   .ov-k.todo{background:var(--ink-soft)}
   .brief-j{flex:0 0 auto;padding:2px 8px;border-radius:6px;border:1px solid #2B5FA8;background:var(--paper-2);font-size:10.5px;font-weight:700;color:#2B5FA8;cursor:pointer}
+  .brief-prev{background:var(--paper);border:1px solid var(--rule);border-radius:9px;padding:8px 11px;margin:0 0 9px}
+  .pv-h{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+  .pv-t{font-size:10.5px;font-weight:700;color:var(--figure);border:1px solid var(--rule-strong);border-radius:5px;padding:1px 7px;flex:0 0 auto}
+  .pv-d{font-family:var(--font-mono);font-size:11px;color:var(--figure);flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pv-more{flex:0 0 auto;padding:2px 9px;border-radius:6px;border:1px solid var(--rule-strong);background:var(--paper-2);font-size:10.5px;font-weight:600;color:var(--ink-soft);cursor:pointer}
+  .pv-more:hover{color:var(--ink);border-color:var(--ink)}
+  .pv-body{font-size:12.5px;line-height:1.65;color:var(--ink);word-break:break-word}
 
   /* --- メモ欄のワンタップ挿入 --- */
   .mm-btns{display:flex;gap:5px;margin:3px 0 0}
@@ -591,6 +598,9 @@
   .ov-cell.empty{border:1px dashed var(--rule);background:transparent}
   .ov-cell.blank{border:none;background:transparent;pointer-events:none}
   .ov-cell.today{outline:1.6px solid var(--shu);outline-offset:-1.6px}
+  .ov-cell.prev{opacity:.46}
+  .ov-cell.prev:hover{opacity:.82;border-color:var(--rule-strong)}
+  .ov-cell.mstart{box-shadow:inset 0 2.5px 0 var(--figure)}
   .ov-cell.sel{border-color:var(--ink);box-shadow:0 0 0 1.4px var(--ink) inset}
   /* 土日の列（.empty/.blank より後ろに置いて、記録のない週末にも色を効かせる） */
   .ov-cell.sun{background:rgba(220,74,46,.05)}
@@ -1507,6 +1517,28 @@ function buildMemoBtns(host,ta,commit,withHold){
 
 /* 計測中の「前回までの持ち越し」。中断からの復帰では検索しに行く発想が湧かないので、こちらから差し出す。
    いま書いている記録そのもののやることは出さない（持ち越しだけを見せる） */
+/* 前回：同じ顧問先で、基準日より前の直近の作業日。その日の作業メモ＋全体メモをまとめて返す。
+   訪問先で「前回何を話したか」を、探しに行かず視線の先で読めるようにするための材料 */
+function lastVisit(clientId, beforeMs){
+  const base=startOfDay(new Date(beforeMs)).getTime();
+  const prior=state.entries
+    .filter(e=>e.clientId===clientId && startOfDay(new Date(e.start)).getTime()<base)
+    .sort((a,b)=>b.start-a.start);
+  if(!prior.length) return null;
+  const dayMs=startOfDay(new Date(prior[0].start)).getTime();
+  const key=dateKey(new Date(dayMs));
+  const sameDay=prior.filter(e=>startOfDay(new Date(e.start)).getTime()===dayMs)
+                     .sort((a,b)=>a.start-b.start);
+  const lines=[];
+  const dm=(state.dayMemos[key]||"").trim();
+  if(dm) dm.split(/\r?\n/).forEach(l=>{ if(l.trim()) lines.push(l.trim()); });
+  for(const e of sameDay){
+    const m=(e.memo||"").trim(); if(!m) continue;
+    m.split(/\r?\n/).forEach(l=>{ if(l.trim()) lines.push(l.trim()); });
+  }
+  return {ms:dayMs, tasks:[...new Set(sameDay.map(e=>e.task).filter(Boolean))], lines};
+}
+
 function renderBrief(){
   const slot=document.getElementById("briefSlot"); if(!slot) return;
   slot.innerHTML="";
@@ -1540,7 +1572,9 @@ function renderBrief(){
   const holds=holdMap().get(run.clientId)||[];
   const issues=issueMap().get(run.clientId)||[];
   const todos=(todoMap().get(run.clientId)||[]).filter(t=>t.entryId!==run.id);
-  if(!holds.length && !issues.length && !todos.length) return;
+  const lv=lastVisit(run.clientId, selDate.getTime());
+  const hasPrev = lv && lv.lines.length;
+  if(!holds.length && !issues.length && !todos.length && !hasPrev) return;
 
   const rows=[]
     .concat(holds.map(h=>({k:"hold",label:"預り",text:h.label,ms:h.ms})))
@@ -1548,18 +1582,39 @@ function renderBrief(){
     .concat(todos.map(t=>({k:"todo",label:"未完",text:t.text||"(内容なし)",ms:t.ms})));
 
   const box=document.createElement("div"); box.className="brief";
+  const PREV_LINES=3;
+  let prevHTML="";
+  if(lv && lv.lines.length){
+    const d=new Date(lv.ms);
+    const head=`${d.getMonth()+1}/${d.getDate()}（${DOW[d.getDay()]}）${agoLabel(lv.ms)}${lv.tasks.length?" ・ "+esc(lv.tasks.join("、")):""}`;
+    const shown=lv.lines.slice(0,PREV_LINES).map(l=>tagHTML(l,"")).join("<br>");
+    const more=lv.lines.length>PREV_LINES;
+    prevHTML=`<div class="brief-prev" id="briefPrev">
+        <div class="pv-h"><span class="pv-t">前回</span><span class="pv-d">${head}</span>
+          ${more?`<button class="pv-more" id="pvMore">全文</button>`:""}</div>
+        <div class="pv-body" id="pvBody">${shown}</div>
+      </div>`;
+  }
   box.innerHTML=`<div class="brief-h">
       <span class="t">前回までの持ち越し</span>
       <span class="c">${esc((c.code?c.code+" ":"")+c.name)}</span>
       <button class="hist" id="briefMat">報告材料</button>
       <button class="hist" id="briefHist">履歴</button>
-    </div>`+
+    </div>`+prevHTML+
     rows.map(r=>`<div class="brief-row" data-ms="${r.ms}">
       <span class="brief-k ${r.k}">${r.label}</span>
       <span class="brief-t">${esc(r.text)}</span>
       ${r.k==="issue"?`<button class="brief-j" data-label="${esc(r.text)}">判断</button>`:""}
       <span class="brief-a">${agoLabel(r.ms)}</span></div>`).join("");
   slot.appendChild(box);
+
+  if(lv && lv.lines.length>PREV_LINES){
+    const btn=box.querySelector("#pvMore"), body=box.querySelector("#pvBody");
+    let open=false;
+    btn.onclick=ev=>{ ev.stopPropagation(); open=!open;
+      body.innerHTML=(open?lv.lines:lv.lines.slice(0,PREV_LINES)).map(l=>tagHTML(l,"")).join("<br>");
+      btn.textContent=open?"閉じる":"全文"; };
+  }
 
   box.querySelector("#briefHist").onclick=ev=>{ ev.stopPropagation(); openClientHistory(run.clientId); };
   box.querySelector("#briefMat").onclick=ev=>{
@@ -2001,7 +2056,10 @@ function renderAnalysis(){
   const cp=document.getElementById("anaCopy");
   if(cp) cp.onclick=()=>copyText(buildMonthSummaryText(anaMonth,cliRows),null);
   anaInner.querySelectorAll(".sum-row.clickable").forEach(el=>el.onclick=()=>openClientHistory(el.dataset.cid));
-  anaInner.querySelectorAll(".ov-cell[data-k]").forEach(b=>b.onclick=()=>selectAnaDay(b.dataset.k));
+  anaInner.querySelectorAll(".ov-cell[data-k]").forEach(b=>b.onclick=()=>{
+    if(b.dataset.prev){ const dt=dayFromKey(b.dataset.k); anaMonth=new Date(dt.getFullYear(),dt.getMonth(),1); anaSelDay=b.dataset.k; renderAnalysis(); }
+    else selectAnaDay(b.dataset.k);
+  });
   renderAnaDay();
 }
 
@@ -2021,16 +2079,41 @@ function drawOverviewHTML(y,mo){
     .map((w,i)=>`<span class="${i===0?"sun":i===6?"sat":""}">${w}</span>`).join("")
     +`<span>週計</span>`;
 
-  // 週単位で組み立て（先頭・末尾は空白で7の倍数に揃える）
+  // 全期間を日付キーで索引（先月マスの文脈表示に使う。当月の数字には一切入れない）
+  const today=new Date(), todayKey2=dateKey(today);
+  const isCur=(y===today.getFullYear() && mo===today.getMonth());
+  const idxAll=new Map();
+  if(isCur){
+    const nowMs=Date.now();
+    for(const e of state.entries){
+      const k=dateKey(new Date(e.start));
+      let o=idxAll.get(k); if(!o){ o={min:0,count:0,byClient:new Map()}; idxAll.set(k,o); }
+      const mn=((e.end||nowMs)-e.start)/60000; o.min+=mn; o.count++;
+      o.byClient.set(e.clientId,(o.byClient.get(e.clientId)||0)+mn);
+    }
+  }
+
+  // 週単位で組み立て（{date,k,o,inMonth}）。当月のときは月初週の上に先月末を2週ぶん前置きし、
+  // 昨日が上端に張り付かず今日の週が中ほどに来るようにする。過去/未来の月は従来どおり空白リード。
+  const PREP_WEEKS=2;
   const slots=[];
-  for(let i=0;i<lead;i++) slots.push(null);
-  for(let d=1;d<=dim;d++) slots.push({d,k:dateKeyOf(y,mo,d),o:data.get(d)});
+  const firstOfMonth=new Date(y,mo,1);
+  if(isCur){
+    const start=new Date(y,mo,1-lead-PREP_WEEKS*7);        // 月初週の日曜からさらにPREP週さかのぼる
+    for(let dt=new Date(start); dt<firstOfMonth; dt.setDate(dt.getDate()+1)){
+      const k=dateKey(dt);
+      slots.push({date:new Date(dt), k, o:idxAll.get(k), inMonth:false});
+    }
+  }else{
+    for(let i=0;i<lead;i++) slots.push(null);
+  }
+  for(let d=1;d<=dim;d++) slots.push({date:new Date(y,mo,d), k:dateKeyOf(y,mo,d), o:data.get(d), inMonth:true});
   while(slots.length%7) slots.push(null);
 
   // 1パス目: 週合計
   const wkMins=[];
   for(let ws=0;ws<slots.length;ws+=7){
-    let m=0; for(let i=0;i<7;i++){ const s=slots[ws+i]; if(s&&s.o) m+=s.o.min; }
+    let m=0; for(let i=0;i<7;i++){ const s=slots[ws+i]; if(s&&s.inMonth&&s.o) m+=s.o.min; }
     wkMins.push(m);
   }
   const maxWeek=Math.max(1,...wkMins);
@@ -2041,17 +2124,18 @@ function drawOverviewHTML(y,mo){
     for(let i=0;i<7;i++){
       const s=slots[ws+i];
       if(!s){ grid+=`<div class="ov-cell blank${i===0?" sun":i===6?" sat":""}"></div>`; continue; }
-      const {d,k,o}=s;
-      const cls=["ov-cell"]; if(!o)cls.push("empty");
+      const {date,k,o,inMonth}=s; const d=date.getDate();
+      const cls=["ov-cell"]; if(!inMonth)cls.push("prev"); if(!o)cls.push("empty");
       if(i===0)cls.push("sun"); else if(i===6)cls.push("sat");
-      if(k===anaSelDay)cls.push("sel"); if(k===todayKey)cls.push("today");
+      if(inMonth && d===1)cls.push("mstart");
+      if(inMonth && k===anaSelDay)cls.push("sel"); if(k===todayKey)cls.push("today");
       const numCls=(i===0?"sun":i===6?"sat":"")+(o?"":" dim");
-      let inner=""; let title=`${mo+1}/${d} 記録なし`;
+      let inner=""; let title=inMonth?`${mo+1}/${d} 記録なし`:`${date.getMonth()+1}/${d}（先月）`;
       if(o){
         const segs=[...o.byClient.entries()].sort((x,z)=>z[1]-x[1]);
         const saved=!!(state.savedDays&&state.savedDays[k]);
         const isPast=k<todayKey;
-        const sdot = isPast||saved ? `<span class="ov-sdot" style="background:${saved?CAL_SAVED_COLOR:"var(--shu)"}"></span>` : "";
+        const sdot = (inMonth&&(isPast||saved)) ? `<span class="ov-sdot" style="background:${saved?CAL_SAVED_COLOR:"var(--shu)"}"></span>` : "";
         const heatA=(0.06+0.26*(o.min/Math.max(1,maxDay))).toFixed(3);   // 0.06〜0.32 少し起こした墨
         const rows=segs.slice(0,4).map(([cid,mn])=>{ const c=getClient(cid);
           return `<span class="ov-cr"><i class="ov-cc" style="color:${c.color}">${esc(c.code||c.name.slice(0,3))}</i><i class="ov-cb"><b style="width:${Math.min(100,mn/full*100).toFixed(1)}%;background:${c.color}"></b></i></span>`;
@@ -2061,12 +2145,12 @@ function drawOverviewHTML(y,mo){
             +`<span class="ov-r1"><span class="ov-num ${numCls}">${d}</span><span class="ov-st">${sdot}<span class="ov-cnt">${o.count}</span></span></span>`
             +`<span class="ov-tot">${fmtDurShort(o.min)}</span>`
             +`<span class="ov-rows">${rows}${more}</span>`;
-        title=`${mo+1}/${d} ${fmtDur(o.min)}・${o.count}件${saved?"・日報保存済み":(isPast?"・日報未保存":"")}`
+        title=`${date.getMonth()+1}/${d} ${fmtDur(o.min)}・${o.count}件${!inMonth?"（先月）":(saved?"・日報保存済み":(isPast?"・日報未保存":""))}`
             + segs.map(([cid,mn])=>{ const c=getClient(cid); return `&#10;${(c.code?c.code+" ":"")+c.name} ${fmtDurShort(mn)}`; }).join("");
       }else{
         inner=`<span class="ov-r1"><span class="ov-num ${numCls}">${d}</span></span>`;
       }
-      grid+=`<button class="${cls.join(" ")}" data-k="${k}" title="${title}">${inner}</button>`;
+      grid+=`<button class="${cls.join(" ")}" data-k="${k}"${inMonth?"":` data-prev="1"`} title="${title}">${inner}</button>`;
     }
     const wm=wkMins[w];
     grid+=`<div class="ov-wk">${wm
