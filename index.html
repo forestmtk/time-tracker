@@ -287,6 +287,30 @@
   .ov-k.hold{background:var(--shu)}
   .ov-k.issue{background:#2B5FA8}
   .ov-k.todo{background:var(--ink-soft)}
+  .ov-k.fl{background:#B8860B}
+
+  /* 今月の申告（ブリーフ内・設定内で共用） */
+  .brief-fl{background:rgba(184,134,11,.07);border:1px solid rgba(184,134,11,.35);border-radius:9px;padding:7px 10px;margin:0 0 9px}
+  .fl-h{font-size:11px;font-weight:700;color:#8a6508;margin-bottom:3px}
+  .fl-h .fl-n{color:#B8860B}
+  .fl-h .fl-done-all{color:#2E7D6B}
+  .fl-row{display:flex;align-items:center;gap:8px;padding:4px 3px;cursor:pointer;border-radius:6px}
+  .fl-row:hover{background:rgba(30,42,56,.05)}
+  .fl-box{flex:0 0 auto;width:15px;height:15px;border:1.5px solid var(--rule-strong);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;background:var(--paper-2)}
+  .fl-row.done .fl-box{background:var(--figure);border-color:var(--figure)}
+  .fl-task{flex:1 1 auto;font-size:13px;color:var(--ink);word-break:break-word}
+  .fl-row.done .fl-task{color:var(--figure);text-decoration:line-through}
+  .fl-star{flex:0 0 auto;font-size:10px;font-weight:700;color:var(--shu);border:1px solid var(--shu);border-radius:4px;padding:0 5px}
+  .fl-due{flex:0 0 auto;font-family:var(--font-mono);font-size:11.5px;color:var(--figure)}
+  .fl-cli{display:flex;align-items:center;gap:7px;margin:14px 2px 4px;font-family:var(--font-disp);font-weight:700;font-size:13.5px;color:var(--ink)}
+  .fl-cli .code{font-size:11px;color:var(--figure)}
+  .fl-row.set{padding:6px 4px;border-bottom:1px solid var(--rule)}
+  .fl-listhead{margin:18px 2px 6px;font-weight:700;font-size:14px;color:var(--ink);border-bottom:1px solid var(--rule-strong);padding-bottom:4px}
+  .fl-listhead .fl-n{font-family:var(--font-mono);font-size:12px;color:#B8860B;margin-left:8px}
+  .fl-msg{margin:8px 2px;font-size:12.5px;line-height:1.6;padding:8px 10px;border-radius:8px;background:var(--paper-2);border:1px solid var(--rule)}
+  .fl-msg.ok{border-color:rgba(46,125,107,.4)}
+  .fl-msg .bad,.fl-msg.bad{color:var(--shu)}
+  .pick-flag.fl{color:#8a6508;border:1px solid #B8860B;background:rgba(184,134,11,.10)}
   .brief-j{flex:0 0 auto;padding:2px 8px;border-radius:6px;border:1px solid #2B5FA8;background:var(--paper-2);font-size:10.5px;font-weight:700;color:#2B5FA8;cursor:pointer}
   .brief-prev{background:var(--paper);border:1px solid var(--rule);border-radius:9px;padding:8px 11px;margin:0 0 9px}
   .pv-h{display:flex;align-items:center;gap:8px;margin-bottom:5px}
@@ -772,7 +796,8 @@ function defaultState(){
     entries:[], // {id, clientId, task, start:ms, end:ms|null, memo:""}
     dayMemos:{}, // {"YYYY-MM-DD": text}
     savedDays:{}, // {"YYYY-MM-DD": true} … Obsidianへ保存済みの印
-    resaveDays:{} // {"YYYY-MM-DD": true} … 保存後に修正され、再保存待ちの日（期限なし）
+    resaveDays:{}, // {"YYYY-MM-DD": true} … 保存後に修正され、再保存待ちの日（期限なし）
+    filings:{} // {clientId: [{id, ym:"YYYY-MM", task, due, star, done}]} … 月次申告チェック取込
   };
 }
 function load(){
@@ -786,6 +811,7 @@ function load(){
     if(!s.dayMemos) s.dayMemos={};
     if(!s.savedDays) s.savedDays={};
     if(!s.resaveDays) s.resaveDays={};
+    if(!s.filings) s.filings={};
     return s;
   }catch(e){ return defaultState(); }
 }
@@ -1216,6 +1242,7 @@ function renderClientPicker(){
   const inp=document.getElementById("cliSearch");
   const draw=()=>{
     _pickHM=holdMap(); _pickTM=todoMap(); _pickIM=issueMap();   // 1回だけ組んで全行で使い回す
+    _pickFYM=currentYM();
     const q=(inp.value||"").trim().toLowerCase();
     const list=document.getElementById("cliList"); list.innerHTML="";
     const specials=state.clients.filter(c=>c.kind!=="client");
@@ -1233,14 +1260,15 @@ function renderClientPicker(){
   };
   inp.oninput=draw; draw();
 }
-let _pickHM=null,_pickTM=null,_pickIM=null;   // 顧問先選択で使う持ち越しの下ごしらえ
+let _pickHM=null,_pickTM=null,_pickIM=null,_pickFYM=null;   // 顧問先選択で使う持ち越しの下ごしらえ
 function pickRow(c,special){
   const b=document.createElement("button");
   b.className="pick"+(special?" special":"");
   const nh=(_pickHM&&_pickHM.get(c.id)||[]).length;
   const nt=(_pickTM&&_pickTM.get(c.id)||[]).length;
   const ni=(_pickIM&&_pickIM.get(c.id)||[]).length;
-  const flags=(nh||nt||ni)?`<span class="pick-flags">${nh?`<span class="pick-flag hold">預${nh}</span>`:""}${ni?`<span class="pick-flag issue">論${ni}</span>`:""}${nt?`<span class="pick-flag todo">未${nt}</span>`:""}</span>`:"";
+  const nf=openFilingsFor(c.id,_pickFYM).length;
+  const flags=(nh||nt||ni||nf)?`<span class="pick-flags">${nf?`<span class="pick-flag fl">申${nf}</span>`:""}${nh?`<span class="pick-flag hold">預${nh}</span>`:""}${ni?`<span class="pick-flag issue">論${ni}</span>`:""}${nt?`<span class="pick-flag todo">未${nt}</span>`:""}</span>`:"";
   b.innerHTML=`<span class="dot" style="background:${c.color}"></span>
     <span class="code mono">${esc(c.code)}</span>
     <span class="nm">${esc(c.name)}</span>${flags}`;
@@ -1539,6 +1567,19 @@ function lastVisit(clientId, beforeMs){
   return {ms:dayMs, tasks:[...new Set(sameDay.map(e=>e.task).filter(Boolean))], lines};
 }
 
+/* 今月の申告セクション（ブリーフ内）。チェックで消える。★は重要（朱） */
+function filingHTML(filings){
+  if(!filings||!filings.length) return "";
+  const open=filings.filter(f=>!f.done).length;
+  const rows=filings.map(f=>`<div class="fl-row${f.done?" done":""}" data-fid="${f.id}">
+      <span class="fl-box">${f.done?"✓":""}</span>
+      <span class="fl-task">${esc(f.task)}</span>
+      ${f.star&&!f.done?`<span class="fl-star">重要</span>`:""}
+      ${f.due?`<span class="fl-due">${esc(f.due)}</span>`:""}
+    </div>`).join("");
+  return `<div class="brief-fl"><div class="fl-h">今月の申告${open?` <span class="fl-n">残${open}</span>`:` <span class="fl-done-all">完了</span>`}</div>${rows}</div>`;
+}
+
 function renderBrief(){
   const slot=document.getElementById("briefSlot"); if(!slot) return;
   slot.innerHTML="";
@@ -1551,7 +1592,8 @@ function renderBrief(){
     const holdN=holdLedger().length, holdStale=holdLedger().filter(h=>daysAgo(h.ms)>=14).length;
     const issN=issueLedger().length, issStale=issueLedger().filter(h=>daysAgo(h.ms)>=30).length;
     let todoN=0; for(const l of todoMap().values()) todoN+=l.length;
-    if(!holdN && !issN && !todoN) return;
+    const fl=allOpenFilings();
+    if(!holdN && !issN && !todoN && !fl.n) return;
 
     const pill=(cls,txt,mode,stale)=>`<button class="ov-pill${stale?" stale":""}" data-mode="${mode}">
         <span class="ov-k ${cls}"></span>${txt}</button>`;
@@ -1559,12 +1601,16 @@ function renderBrief(){
     box.innerHTML=`<div class="brief-h"><span class="t">持ち越し（全顧問先）</span>
         <span class="c">計測を始めると、その顧問先ぶんがここに出ます</span></div>
       <div class="ov-pills">
+        ${fl.n?pill("fl",`今月の申告 残${fl.n}件${fl.star?`（重要 ${fl.star}）`:""}`,"__filings",fl.star):""}
         ${holdN?pill("hold",`預り ${holdN}件${holdStale?`（14日↑ ${holdStale}）`:""}`,"hold",holdStale):""}
         ${issN?pill("issue",`論点 ${issN}件${issStale?`（30日↑ ${issStale}）`:""}`,"issue",issStale):""}
         ${todoN?pill("todo",`未完 ${todoN}件`,"todo",false):""}
       </div>`;
     slot.appendChild(box);
-    box.querySelectorAll(".ov-pill").forEach(b=>b.onclick=()=>setView("memo",b.dataset.mode));
+    box.querySelectorAll(".ov-pill").forEach(b=>b.onclick=()=>{
+      if(b.dataset.mode==="__filings") openSettings("filings");
+      else setView("memo",b.dataset.mode);
+    });
     return;
   }
 
@@ -1572,9 +1618,10 @@ function renderBrief(){
   const holds=holdMap().get(run.clientId)||[];
   const issues=issueMap().get(run.clientId)||[];
   const todos=(todoMap().get(run.clientId)||[]).filter(t=>t.entryId!==run.id);
+  const filings=filingsFor(run.clientId);              // 今月の申告（完了ぶんも取り消し線で残す）
   const lv=lastVisit(run.clientId, selDate.getTime());
   const hasPrev = lv && lv.lines.length;
-  if(!holds.length && !issues.length && !todos.length && !hasPrev) return;
+  if(!holds.length && !issues.length && !todos.length && !filings.length && !hasPrev) return;
 
   const rows=[]
     .concat(holds.map(h=>({k:"hold",label:"預り",text:h.label,ms:h.ms})))
@@ -1600,13 +1647,19 @@ function renderBrief(){
       <span class="c">${esc((c.code?c.code+" ":"")+c.name)}</span>
       <button class="hist" id="briefMat">報告材料</button>
       <button class="hist" id="briefHist">履歴</button>
-    </div>`+prevHTML+
+    </div>`+prevHTML+filingHTML(filings)+
     rows.map(r=>`<div class="brief-row" data-ms="${r.ms}">
       <span class="brief-k ${r.k}">${r.label}</span>
       <span class="brief-t">${esc(r.text)}</span>
       ${r.k==="issue"?`<button class="brief-j" data-label="${esc(r.text)}">判断</button>`:""}
       <span class="brief-a">${agoLabel(r.ms)}</span></div>`).join("");
   slot.appendChild(box);
+
+  // 今月の申告：チェックで消せる（記録には触らず filings 側を更新）
+  box.querySelectorAll(".fl-row").forEach(el=>el.onclick=ev=>{
+    ev.stopPropagation();
+    if(toggleFiling(run.clientId, el.dataset.fid)) renderBrief();
+  });
 
   if(lv && lv.lines.length>PREV_LINES){
     const btn=box.querySelector("#pvMore"), body=box.querySelector("#pvBody");
@@ -2360,6 +2413,85 @@ function decisionLog(){
   return out.sort((a,b)=>b.ms-a.ms);
 }
 
+/* ============================================================
+   月次申告チェックの取り込み（申告業務管理プロジェクトのチェックリストを橋渡し）
+   取込ブロックの形式（区切りは | ｜ 　 タブ いずれも可）:
+     #申告取込 2026-08
+     411 | 源泉納付 | 8/11
+     429 | 簡易課税選択届 | 8/31 ★     ← ★=重要（届出期限など落とせないもの）
+   コードは関与先コードで顧問先に対応付ける。一致しないコードは取込結果で報告する。
+============================================================ */
+function currentYM(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
+
+function parseFilingBlock(text){
+  const lines=String(text||"").split(/\r?\n/);
+  let ym=null; const rows=[]; const bad=[];
+  for(let raw of lines){
+    const ln=raw.trim(); if(!ln) continue;
+    const mh=ln.match(/^#?\s*申告取込\s*([0-9]{4})[-\/]([0-9]{1,2})/);
+    if(mh){ ym=mh[1]+"-"+String(mh[2]).padStart(2,"0"); continue; }
+    if(/^#/.test(ln)) continue;                       // 他の見出しは無視
+    const star=/★|＊|\*/.test(ln);
+    const parts=ln.replace(/[★＊*]/g,"").split(/\s*[|｜\t]\s*|　+|\s{2,}/).map(s=>s.trim()).filter(Boolean);
+    if(parts.length<2){ bad.push(ln); continue; }
+    const code=parts[0];
+    if(!/^[0-9A-Za-z]+$/.test(code)){ bad.push(ln); continue; }
+    const task=parts[1]||"申告";
+    const due=parts[2]||"";
+    rows.push({code,task,due,star});
+  }
+  return {ym,rows,bad};
+}
+
+/* 取込を実行。既存の同月・同コードは置き換える（月イチ再取込で二重にならない）。done は極力引き継ぐ */
+function importFilings(text){
+  const {ym,rows,bad}=parseFilingBlock(text);
+  if(!ym) return {ok:false, msg:"先頭に「#申告取込 2026-08」のような月の行が見つかりませんでした。"};
+  const byCode=new Map();
+  for(const c of state.clients) if(c.code) byCode.set(String(c.code), c.id);
+  // 旧done保持用
+  const prevDone=new Map();
+  for(const [cid,list] of Object.entries(state.filings||{}))
+    for(const f of list) if(f.ym===ym) prevDone.set(cid+"|"+f.task, f.done);
+  // 同月ぶんを一旦クリア
+  for(const cid of Object.keys(state.filings||{}))
+    state.filings[cid]=(state.filings[cid]||[]).filter(f=>f.ym!==ym);
+
+  let added=0; const unmatched=[];
+  for(const r of rows){
+    const cid=byCode.get(String(r.code));
+    if(!cid){ unmatched.push(r.code+"（"+r.task+"）"); continue; }
+    if(!state.filings[cid]) state.filings[cid]=[];
+    state.filings[cid].push({
+      id:uid(), ym, task:r.task, due:r.due, star:r.star,
+      done: prevDone.get(cid+"|"+r.task)||false
+    });
+    added++;
+  }
+  // 空配列の掃除
+  for(const cid of Object.keys(state.filings)) if(!state.filings[cid].length) delete state.filings[cid];
+  save();
+  return {ok:true, ym, added, unmatched, bad};
+}
+
+/* 顧問先の「今月ぶん・未完」申告。ブリーフ／バッジ／サマリで使う */
+function filingsFor(clientId, ym){
+  ym=ym||currentYM();
+  return (state.filings&&state.filings[clientId]||[]).filter(f=>f.ym===ym);
+}
+function openFilingsFor(clientId, ym){ return filingsFor(clientId,ym).filter(f=>!f.done); }
+function allOpenFilings(ym){
+  ym=ym||currentYM(); let n=0, star=0;
+  for(const cid of Object.keys(state.filings||{}))
+    for(const f of state.filings[cid]) if(f.ym===ym && !f.done){ n++; if(f.star) star++; }
+  return {n, star};
+}
+function toggleFiling(clientId, fid){
+  const list=state.filings&&state.filings[clientId]; if(!list) return false;
+  const f=list.find(x=>x.id===fid); if(!f) return false;
+  f.done=!f.done; save(); return true;
+}
+
 /* 顧問先ID → 未完のやること[] */
 function todoMap(){
   const m=new Map();
@@ -2847,6 +2979,13 @@ function buildAuditMaterial(clientId, s, e, label){
     L.push("");
   }
 
+  const fl=filingsFor(clientId);
+  if(fl.length){
+    L.push("## 今月の申告");
+    for(const f of fl) L.push(`- [${f.done?"x":" "}] ${f.task}${f.due?`（期限 ${f.due}）`:""}${f.star?" ★":""}`);
+    L.push("");
+  }
+
   L.push("## 決算・数値の状況");
   L.push("（kessan_app の「Claude用エクスポート」をこの下に貼り付ける。無ければ「今回は数値なし」と書く）");
   L.push("");
@@ -2873,6 +3012,7 @@ function chRowHTML(e,now,withDate){
    設定：顧問先 / 業務内容
 ============================================================ */
 document.getElementById("setBtn").onclick=()=>{ renderSettings(); openSheet(); };
+function openSettings(tab){ renderSettings(); openSheet(); if(tab){ const b=document.querySelector(`#segTop button[data-t="${tab}"]`); if(b) b.click(); } }
 function renderSettings(){
   sheetHead.innerHTML=`<h2>設定</h2>`;
   sheetBody.innerHTML=`
@@ -2880,6 +3020,7 @@ function renderSettings(){
       <button data-t="clients" class="on">顧問先</button>
       <button data-t="bulk">一括登録</button>
       <button data-t="tasks">業務</button>
+      <button data-t="filings">申告</button>
       <button data-t="data">データ</button>
     </div>
     <div id="setPane"></div>`;
@@ -2930,6 +3071,9 @@ function paneRender(t){
     tseg.querySelectorAll("button").forEach(b=>b.onclick=()=>{ tseg.querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); taskPaneRender(b.dataset.k); });
     taskPaneRender("client");
   }
+  else if(t==="filings"){
+    filingsPaneRender();
+  }
   else{ // data
     const nCli=state.clients.filter(c=>c.kind==="client").length;
     const nEnt=state.entries.length;
@@ -2954,6 +3098,63 @@ function paneRender(t){
   }
 }
 /* 保存状況を数える（7日窓に関係なく、未保存の過去日を全部見る） */
+/* 設定「申告」：取り込みと今月の一覧 */
+function filingsPaneRender(){
+  const pane=document.getElementById("setPane");
+  const ym=currentYM();
+  const [yy,mm]=ym.split("-");
+  // 今月ぶんを顧問先ごとに集計（コード順）
+  const groups=[];
+  for(const c of state.clients){
+    const list=filingsFor(c.id, ym);
+    if(list.length) groups.push({c, list});
+  }
+  groups.sort((a,b)=>(a.c.code||"").localeCompare(b.c.code||"",undefined,{numeric:true}));
+  const openTotal=groups.reduce((n,g)=>n+g.list.filter(f=>!f.done).length,0);
+
+  let listHTML="";
+  if(groups.length===0){
+    listHTML=`<div class="hint" style="margin:6px 4px">${yy}年${Number(mm)}月ぶんの取り込みはまだありません。</div>`;
+  }else{
+    for(const g of groups){
+      listHTML+=`<div class="fl-cli"><span class="dot" style="background:${g.c.color}"></span>
+        <span class="code mono">${esc(g.c.code)}</span><span class="nm">${esc(g.c.name)}</span></div>`;
+      for(const f of g.list){
+        listHTML+=`<div class="fl-row set${f.done?" done":""}" data-cid="${g.c.id}" data-fid="${f.id}">
+          <span class="fl-box">${f.done?"✓":""}</span>
+          <span class="fl-task">${esc(f.task)}</span>
+          ${f.star&&!f.done?`<span class="fl-star">重要</span>`:""}
+          ${f.due?`<span class="fl-due">${esc(f.due)}</span>`:""}</div>`;
+      }
+    }
+  }
+
+  pane.innerHTML=`
+    <div class="hint">申告業務管理プロジェクトで作った「今月のチェックリスト」の<b>取り込みブロック</b>をここに貼ります。関与先コードで各顧問先に配られ、計測を始めるとその顧問先のブリーフに出ます。同じ月をもう一度貼ると置き換わります（チェック済みは引き継ぎ）。</div>
+    <textarea class="bulk" id="flTxt" placeholder="#申告取込 ${ym}&#10;411 | 源泉納付 | 8/11&#10;429 | 消費税申告 | 8/31&#10;429 | 簡易課税選択届 | 8/31 ★"></textarea>
+    <div class="actions"><button class="btn-fill" id="flGo">取り込む</button></div>
+    <div id="flResult"></div>
+    <div class="fl-listhead">${yy}年${Number(mm)}月の申告 <span class="fl-n">${openTotal?`残${openTotal}`:"完了"}</span></div>
+    <div id="flList">${listHTML}</div>`;
+
+  document.getElementById("flGo").onclick=()=>{
+    const txt=document.getElementById("flTxt").value;
+    const r=importFilings(txt);
+    const box=document.getElementById("flResult");
+    if(!r.ok){ box.innerHTML=`<div class="fl-msg bad">${esc(r.msg)}</div>`; return; }
+    let msg=`${r.ym} を取り込みました：${r.added}件`;
+    if(r.unmatched.length) msg+=`<br><b class="bad">未対応コード ${r.unmatched.length}件</b>：${esc(r.unmatched.join("、"))}（顧問先に無いコードです）`;
+    if(r.bad.length) msg+=`<br>読めなかった行 ${r.bad.length}件は飛ばしました。`;
+    box.innerHTML=`<div class="fl-msg ok">${msg}</div>`;
+    toast(`申告 ${r.added}件を取り込みました`);
+    filingsPaneRender();
+    renderAll();
+  };
+  pane.querySelectorAll("#flList .fl-row").forEach(el=>el.onclick=()=>{
+    if(toggleFiling(el.dataset.cid, el.dataset.fid)){ filingsPaneRender(); }
+  });
+}
+
 function saveStatus(){
   const today=startOfDay(new Date()).getTime();
   const sd=state.savedDays||{};
