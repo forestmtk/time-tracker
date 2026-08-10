@@ -469,6 +469,10 @@
     background:var(--paper);font-size:14px;font-weight:600;
   }
   .chip:hover{border-color:var(--figure)}
+  .chip.sm{padding:8px 12px;font-size:13px}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chip.on:hover{border-color:var(--ink)}
+  .field .task-free{margin-top:8px}
 
   .field{margin:12px 4px}
   .field label{display:block;font-size:11px;color:var(--figure);font-weight:600;margin-bottom:5px}
@@ -509,6 +513,14 @@
   .tasklist-item .mv:disabled{opacity:.28;cursor:default}
   .tasklist-item .x{color:var(--shu);padding:6px 9px;border-radius:7px;font-size:16px}
   .tasklist-item .x:hover{background:var(--shu-soft)}
+  .tasklist-item .grip{
+    flex:0 0 auto;width:22px;text-align:center;line-height:1;font-size:15px;
+    color:var(--figure);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;
+  }
+  .tasklist-item .grip:hover{color:var(--ink)}
+  .tasklist-item .grip:active{cursor:grabbing}
+  .tasklist-item.dragging{background:var(--paper-2);border-radius:9px;box-shadow:var(--shadow);opacity:.95;border-bottom-color:transparent}
+  body.dragging-task{user-select:none;-webkit-user-select:none}
   .add-inline{display:flex;gap:8px;margin-top:8px}
   .add-inline input{flex:1}
   .add-inline button{padding:0 16px;border-radius:9px;background:var(--ink);color:#fff;font-weight:700}
@@ -1508,8 +1520,8 @@ function openEditEntry(id){
   sheetBody.innerHTML=`
     <div class="field"><label>顧問先</label><select id="edCli">${cliOpts}</select></div>
     <div class="field"><label>業務内容</label>
-      <input id="edTask" list="taskDL" value="${esc(e.task||"")}" autocomplete="off">
-      <datalist id="taskDL"></datalist>
+      <div class="chip-wrap" id="edChips"></div>
+      <input id="edTask" class="task-free" value="${esc(e.task||"")}" autocomplete="off" placeholder="一覧にない業務は直接入力">
     </div>
     <div class="row2">
       <div class="field"><label>開始</label>${tfWrap("edStart",fmtTime(e.start))}</div>
@@ -1525,10 +1537,29 @@ function openEditEntry(id){
       ${!running?`<button class="btn-ghost" id="edDup" style="flex:1">複製</button>`:""}
       <button class="btn-danger" id="edDel" style="flex:1">削除</button>
     </div>`;
-  // datalist を顧問先種別に追随
-  const fillDL=()=>{ const c=getClient(document.getElementById("edCli").value); const set=state.tasks[taskSetFor(c)];
-    document.getElementById("taskDL").innerHTML=set.map(t=>`<option value="${esc(t)}">`).join(""); };
-  document.getElementById("edCli").onchange=fillDL; fillDL();
+  // 業務内容はチップで選ぶ（datalist だと既存の値で候補が絞られて選べないため）。
+  // 顧問先を変えると業務セット（顧問先／社内）も追随する。一覧にないものは下の欄に直接入力。
+  const edTaskEl=document.getElementById("edTask");
+  const fillChips=()=>{
+    const c=getClient(document.getElementById("edCli").value);
+    const set=(c && state.tasks[taskSetFor(c)]) || [];
+    const cur=edTaskEl.value.trim();
+    const wrap=document.getElementById("edChips");
+    wrap.innerHTML="";
+    if(!set.length){
+      wrap.innerHTML=`<div class="hint" style="margin:0">この種別の業務がまだ登録されていません。下の欄に直接入力できます。</div>`;
+      return;
+    }
+    set.forEach(t=>{
+      const b=document.createElement("button");
+      b.type="button"; b.className="chip sm"+(t===cur?" on":""); b.textContent=t;
+      b.onclick=()=>{ edTaskEl.value=t; fillChips(); };
+      wrap.appendChild(b);
+    });
+  };
+  document.getElementById("edCli").onchange=fillChips;
+  edTaskEl.addEventListener("input",fillChips);
+  fillChips();
   initTF(sheetBody);
 
   document.getElementById("edSave").onclick=()=>{
@@ -3239,15 +3270,60 @@ function importData(file){
   };
   r.readAsText(file);
 }
+/* 業務一覧のドラッグ並べ替え。
+   HTML5 の draggable はタッチで効かないので Pointer Events で実装する。
+   掴んでいる間は DOM を直接入れ替えて見た目を追随させ、離した時点で state に確定する。 */
+function startTaskDrag(ev,row,items,k){
+  if(ev.button!==undefined && ev.button!==0) return;
+  ev.preventDefault();
+  const grip=ev.currentTarget;
+  try{ grip.setPointerCapture(ev.pointerId); }catch(_){}
+  row.classList.add("dragging");
+  document.body.classList.add("dragging-task");
+
+  const move=e=>{
+    const y=e.clientY;
+    // 1イベントで複数段ぶん動くこともあるので、落ち着くまで繰り返す（速く振ったときの取り残し防止）
+    for(let guard=0;guard<64;guard++){
+      let moved=false;
+      for(const other of items.querySelectorAll(".tasklist-item")){
+        if(other===row) continue;
+        const r=other.getBoundingClientRect(), mid=r.top+r.height/2;
+        const rowIsAfter = !!(other.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING);
+        if(y<mid && rowIsAfter){ items.insertBefore(row,other); moved=true; break; }
+        if(y>mid && !rowIsAfter){ items.insertBefore(row,other.nextSibling); moved=true; break; }
+      }
+      if(!moved) break;
+    }
+  };
+  const end=()=>{
+    grip.removeEventListener("pointermove",move);
+    grip.removeEventListener("pointerup",end);
+    grip.removeEventListener("pointercancel",end);
+    row.classList.remove("dragging");
+    document.body.classList.remove("dragging-task");
+    const next=[...items.querySelectorAll(".tasklist-item")].map(el=>state.tasks[k][Number(el.dataset.i)]);
+    if(next.length===state.tasks[k].length && next.every(v=>v!==undefined)){
+      state.tasks[k].length=0; state.tasks[k].push(...next); save();
+    }
+    taskPaneRender(k);
+  };
+  grip.addEventListener("pointermove",move);
+  grip.addEventListener("pointerup",end);
+  grip.addEventListener("pointercancel",end);
+}
+
 function taskPaneRender(k){
   const pane=document.getElementById("taskPane");
   const list=state.tasks[k];
-  pane.innerHTML=`<div id="taskItems"></div>
+  pane.innerHTML=`<div class="hint">左の ⠿ をつまむと並べ替えられます（▲▼でも動きます）。この並び順が、計測開始と記録の修正でそのまま出ます。</div>
+    <div id="taskItems"></div>
     <div class="add-inline"><input id="newTask" placeholder="業務を追加" autocomplete="off"><button id="newTaskGo">追加</button></div>`;
   const items=document.getElementById("taskItems");
   list.forEach((t,i)=>{
-    const row=document.createElement("div"); row.className="tasklist-item";
-    row.innerHTML=`<span class="ord">
+    const row=document.createElement("div"); row.className="tasklist-item"; row.dataset.i=i;
+    row.innerHTML=`<span class="grip" title="ドラッグして並べ替え">⠿</span>
+      <span class="ord">
         <button class="mv up" aria-label="上へ"${i===0?" disabled":""}>▲</button>
         <button class="mv dn" aria-label="下へ"${i===list.length-1?" disabled":""}>▼</button>
       </span>
@@ -3255,6 +3331,7 @@ function taskPaneRender(k){
     row.querySelector(".up").onclick=()=>{ if(i>0){ [list[i-1],list[i]]=[list[i],list[i-1]]; save(); taskPaneRender(k); } };
     row.querySelector(".dn").onclick=()=>{ if(i<list.length-1){ [list[i+1],list[i]]=[list[i],list[i+1]]; save(); taskPaneRender(k); } };
     row.querySelector(".x").onclick=()=>{ list.splice(i,1); save(); taskPaneRender(k); };
+    row.querySelector(".grip").addEventListener("pointerdown",ev=>startTaskDrag(ev,row,items,k));
     items.appendChild(row);
   });
   const add=()=>{ const v=document.getElementById("newTask").value.trim(); if(!v)return; if(!list.includes(v))list.push(v); save(); taskPaneRender(k); };
