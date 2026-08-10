@@ -61,6 +61,18 @@
     display:grid;place-items:center;color:var(--ink-soft);background:var(--paper-2);
   }
   .icon-btn:hover{border-color:var(--figure);color:var(--ink)}
+
+  /* ヘッダの申告バッジ（計測中でも他の顧問先の申告残に気づけるように） */
+  .fl-badge[hidden]{display:none}
+  .fl-badge{
+    height:38px;padding:0 10px;border-radius:9px;flex:0 0 auto;margin-right:6px;
+    display:flex;align-items:center;gap:4px;cursor:pointer;
+    border:1px solid #B8860B;background:rgba(184,134,11,.10);
+    font-size:12px;font-weight:700;color:#8a6508;
+  }
+  .fl-badge:hover{background:rgba(184,134,11,.20)}
+  .fl-badge .n{font-family:var(--font-mono);font-size:13.5px;line-height:1}
+  .fl-badge.star{border-color:var(--shu);background:rgba(220,74,46,.09);color:var(--shu)}
   .icon-btn svg{width:18px;height:18px}
 
   /* ---------- 作業領域(タイムライン + メモ) ---------- */
@@ -706,6 +718,7 @@
   <span class="ana-head-title" id="anaHeadTitle" hidden>ふりかえり</span>
   <span class="ana-head-title" id="memoHeadTitle" hidden>メモ</span>
   <div class="spacer"></div>
+  <button class="fl-badge" id="flBadge" hidden>申<span class="n"></span></button>
   <button class="icon-btn" id="memoBtn" aria-label="メモ" title="メモ（横断して読み返す・検索）">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 10h16M4 15h10"/><circle cx="17.5" cy="17.5" r="3.5"/><path d="M20 20l2.5 2.5"/></svg>
   </button>
@@ -963,6 +976,37 @@ const DOW=["日","月","火","水","木","金","土"];
 function renderHeader(){
   document.getElementById("dateH").textContent=(selDate.getMonth()+1)+"月"+selDate.getDate()+"日";
   document.getElementById("dateDow").textContent="("+DOW[selDate.getDay()]+")";
+  renderFilingBadge();
+}
+
+/* ヘッダの申告バッジ。
+   いまブリーフに出ていない申告（＝取りこぼす可能性のあるぶん）だけを控えめに示す。
+   ・計測なし×今日 … 「持ち越し（全顧問先）」が全件出しているので出さない
+   ・計測あり       … その顧問先ぶんはブリーフに出るので、それを差し引いた他社ぶん
+   ・過去日を閲覧中 … ブリーフが出ないので全件 */
+function unseenFilings(){
+  const all=allOpenFilings();
+  if(!all.n) return {n:0,star:0};
+  const run=runningEntry();
+  const runHere=run && isSameDay(new Date(run.start),selDate);
+  if(!runHere) return isSameDay(selDate,new Date()) ? {n:0,star:0} : all;
+  const ym=currentYM(), mine=String(run.clientId);
+  let n=0,star=0;
+  for(const cid of Object.keys(state.filings||{})){
+    if(cid===mine) continue;
+    for(const f of state.filings[cid]) if(f.ym===ym && !f.done){ n++; if(f.star) star++; }
+  }
+  return {n,star};
+}
+function renderFilingBadge(){
+  const b=document.getElementById("flBadge"); if(!b) return;
+  const {n,star}=unseenFilings();
+  b.hidden=!n;
+  if(!n) return;
+  b.classList.toggle("star",!!star);
+  b.querySelector(".n").textContent=n;
+  b.title=`他の顧問先の今月の申告 残${n}件${star?`（重要 ${star}）`:""} … タップで一覧`;
+  b.onclick=()=>openSettings("filings");
 }
 document.getElementById("todayBtn").onclick=()=>{ selDate=startOfDay(new Date()); renderAll(); scrollToRelevant(); };
 document.getElementById("prevBtn").onclick=()=>{ selDate=new Date(selDate.getTime()-86400000); renderAll(); };
@@ -3151,7 +3195,7 @@ function filingsPaneRender(){
     renderAll();
   };
   pane.querySelectorAll("#flList .fl-row").forEach(el=>el.onclick=()=>{
-    if(toggleFiling(el.dataset.cid, el.dataset.fid)){ filingsPaneRender(); }
+    if(toggleFiling(el.dataset.cid, el.dataset.fid)){ filingsPaneRender(); renderAll(); }
   });
 }
 
