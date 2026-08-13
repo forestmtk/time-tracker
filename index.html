@@ -444,6 +444,10 @@
   .run-elapsed{font-family:var(--font-mono);font-weight:700;font-size:16px;color:var(--shu)}
   .btn-stop{border-radius:10px;padding:0 16px;background:var(--shu);color:#fff;font-weight:700;font-size:14px}
   .btn-switch{border-radius:10px;padding:0 14px;border:1px solid var(--rule-strong);color:var(--ink-soft);font-weight:600}
+  /* ドックの「メモ」：ブリーフはスクロールで流れるし、持ち越しが無い顧問先では出ない。
+     計測中つねに見えているのはここだけなので、過去メモの入口を必ず置く */
+  .btn-notes{border-radius:10px;padding:0 13px;border:1px solid var(--shu);color:var(--shu);font-weight:700;font-size:13px;background:var(--paper)}
+  .btn-notes:hover{background:var(--shu-soft)}
 
   /* ---------- シート / モーダル ---------- */
   .scrim{position:fixed;inset:0;background:rgba(30,42,56,.38);z-index:40;display:none;opacity:0;transition:opacity .18s}
@@ -459,6 +463,7 @@
   .sheet-grip{width:38px;height:4px;border-radius:2px;background:var(--rule-strong);margin:10px auto 4px}
   .sheet-head{display:flex;align-items:center;padding:6px 18px 10px;gap:10px}
   .sheet-head h2{margin:0;font-size:16px;font-weight:700}
+  .sheet-head .app-ver{margin-left:auto;font-size:11px;color:var(--figure);letter-spacing:.02em}
   .sheet-head .back{font-size:20px;color:var(--ink-soft);width:30px;height:30px;border-radius:8px}
   .sheet-head .back:hover{background:var(--paper)}
   .sheet-body{overflow-y:auto;padding:0 14px 16px}
@@ -809,6 +814,9 @@
    日報の書き出し（Markdown/テキスト）・Obsidian直接保存
 ============================================================ */
 
+/* 公開版が古いままかを、その場で判別するための版数。
+   index.html を差し替えるたびに必ず更新すること（日付＋a,b,c…） */
+const APP_VER = "2026-08-13a";
 const STORE_KEY = "timeTracker.v1";
 const VIEW_START_H = 6;    // タイムライン表示開始
 const VIEW_END_H   = 22;   // 表示終了
@@ -1115,6 +1123,13 @@ function renderDock(){
       </span>
       <span class="run-elapsed mono" id="runElapsed"></span>`;
     dock.appendChild(wrap);
+
+    // 顧問先名の右にメモ（＝過去メモへの入口）。ブリーフ内のボタンは持ち越しが無いと出ないため、ここが本命
+    const nt=document.createElement("button");
+    nt.className="btn-notes"; nt.textContent="メモ";
+    nt.title="この顧問先の過去メモを検索して読む";
+    nt.onclick=()=>openClientHistory(run.clientId,"memo");
+    dock.appendChild(nt);
 
     const sw=document.createElement("button");
     sw.className="btn-switch"; sw.textContent="切替";
@@ -3302,7 +3317,7 @@ function chRowHTML(e,now,withDate){
 document.getElementById("setBtn").onclick=()=>{ renderSettings(); openSheet(); };
 function openSettings(tab){ renderSettings(); openSheet(); if(tab){ const b=document.querySelector(`#segTop button[data-t="${tab}"]`); if(b) b.click(); } }
 function renderSettings(){
-  sheetHead.innerHTML=`<h2>設定</h2>`;
+  sheetHead.innerHTML=`<h2>設定</h2><span class="app-ver mono" title="この画面を開いている index.html の版数">v${APP_VER}</span>`;
   sheetBody.innerHTML=`
     <div class="seg" id="segTop">
       <button data-t="clients" class="on">顧問先</button>
