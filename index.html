@@ -375,6 +375,28 @@
     .me-time{margin-left:0}
   }
   .ana-inner{max-width:1440px;margin:0 auto;padding-top:14px}
+  /* --- 決算ボード（ふりかえり最上段） --- */
+  .cl-card{background:var(--paper-2);border:1px solid var(--rule);border-left:3px solid var(--shu);
+    border-radius:12px;padding:10px 14px 12px;margin:0 0 14px;box-shadow:var(--shadow)}
+  .cl-h{display:flex;align-items:baseline;gap:9px;margin-bottom:8px}
+  .cl-h .t{font-size:12.5px;font-weight:700;color:var(--shu)}
+  .cl-h .s{font-size:11px;color:var(--figure)}
+  .cl-tbl{width:100%;border-collapse:collapse;font-size:12px}
+  .cl-tbl th{font-size:10.5px;font-weight:700;color:var(--figure);text-align:center;padding:0 2px 5px;white-space:nowrap}
+  .cl-tbl th.l,.cl-tbl td.l{text-align:left}
+  .cl-tbl td{padding:3px 2px;border-top:1px solid var(--rule)}
+  .cl-cli{display:flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap;max-width:210px;overflow:hidden}
+  .cl-cli .dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+  .cl-cli .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis}
+  .cl-fy{font-family:var(--font-mono);font-size:10.5px;color:var(--figure);flex:0 0 auto}
+  .cl-cell{width:100%;height:24px;border-radius:6px;border:1px solid var(--rule-strong);background:var(--paper);
+    font-size:10.5px;font-weight:700;color:var(--figure);cursor:pointer;line-height:1}
+  .cl-cell.auto{border-style:dashed;color:var(--ink-soft)}
+  .cl-cell.on{background:#2E7D6B;border-color:#2E7D6B;color:#fff}
+  .cl-cell.doing{background:var(--shu-soft);border-color:var(--shu);color:var(--shu)}
+  .cl-due{font-family:var(--font-mono);font-size:11.5px;font-weight:700;text-align:right;white-space:nowrap}
+  .cl-left{font-family:var(--font-mono);font-size:11px;text-align:right;white-space:nowrap;color:var(--figure)}
+  .cl-left.hot{color:var(--shu);font-weight:700}
   .ana-nav{display:flex;align-items:center;gap:6px}
   .ana-nav button{width:34px;height:34px;border-radius:9px;border:1px solid var(--rule);background:var(--paper-2);color:var(--ink-soft);font-size:18px;display:grid;place-items:center}
   .ana-nav button:hover{border-color:var(--figure);color:var(--ink)}
@@ -820,7 +842,7 @@
 
 /* 公開版が古いままかを、その場で判別するための版数。
    index.html を差し替えるたびに必ず更新すること（日付＋a,b,c…） */
-const APP_VER = "2026-08-13b";
+const APP_VER = "2026-08-13c";
 const STORE_KEY = "timeTracker.v1";
 const VIEW_START_H = 6;    // タイムライン表示開始
 const VIEW_END_H   = 22;   // 表示終了
@@ -859,7 +881,8 @@ function defaultState(){
     dayMemos:{}, // {"YYYY-MM-DD": text}
     savedDays:{}, // {"YYYY-MM-DD": true} … Obsidianへ保存済みの印
     resaveDays:{}, // {"YYYY-MM-DD": true} … 保存後に修正され、再保存待ちの日（期限なし）
-    filings:{} // {clientId: [{id, ym:"YYYY-MM", task, due, star, done}]} … 月次申告チェック取込
+    filings:{}, // {clientId: [{id, ym:"YYYY-MM", task, due, star, done}]} … 月次申告チェック取込
+    closings:{} // {"clientId|YYYY-MM"(期末): {a:0|1|2, …}} … 決算工程の手動状態
   };
 }
 function load(){
@@ -874,6 +897,7 @@ function load(){
     if(!s.savedDays) s.savedDays={};
     if(!s.resaveDays) s.resaveDays={};
     if(!s.filings) s.filings={};
+    if(!s.closings) s.closings={};
     return s;
   }catch(e){ return defaultState(); }
 }
@@ -2111,6 +2135,102 @@ document.getElementById("sumBtn").onclick=()=>{
 };
 document.getElementById("memoBtn").onclick=()=>{ setView(appView==="memo"?"log":"memo"); };
 
+/* ============================================================
+   決算の進捗（毎月まわってくる本業。工数の集計より先に見たいもの）
+   ・工程は5つで固定。増やすと押さなくなる
+   ・「着手」は業務名から機械が拾う。「完了」だけ人が押す（判定は機械・意思は人）
+   ・期限は決算月から機械計算（法法74①＝事業年度終了の日の翌日から2月以内、
+     延長の特例〈法法75の2〉ありなら1月加算）。土日は翌月曜に送るが祝日は見ていない
+============================================================ */
+const CLOSE_STAGES=[
+  {k:"a", label:"資料受領",     tasks:[]},                          // 手動（#預りがあれば着手扱い）
+  {k:"b", label:"記帳・整理",   tasks:["記帳・仕訳チェック"]},
+  {k:"c", label:"決算見込・報告",tasks:["決算・決算見込"]},
+  {k:"d", label:"申告書作成",   tasks:["申告書作成","消費税"]},
+  {k:"e", label:"申告・納付",   tasks:[]}                           // 手動
+];
+function monthEnd(y,mo){ return new Date(y,mo+1,0); }               // mo は 0起点
+function shiftWeekend(d){                                            // 土日なら翌月曜（祝日は未対応）
+  const x=new Date(d); const w=x.getDay();
+  if(w===6) x.setDate(x.getDate()+2); else if(w===0) x.setDate(x.getDate()+1);
+  return x;
+}
+/* いま走っている決算期を返す（期末月の前月〜申告期限+15日）。無ければ null */
+function currentClosing(c, base){
+  if(!c || !c.fy) return null;
+  const t=startOfDay(base||new Date()); const y=t.getFullYear();
+  for(const yy of [y-1,y,y+1]){
+    const end=monthEnd(yy,c.fy-1);                                   // 決算月の末日
+    const due=shiftWeekend(monthEnd(yy,c.fy-1+(c.ext?3:2)));         // 申告期限
+    const from=new Date(yy,c.fy-2,1);                                // 期末月の前月1日から見る
+    const until=new Date(due); until.setDate(until.getDate()+15);
+    if(t>=from && t<=until) return {end, due, key:c.id+"|"+end.getFullYear()+"-"+String(end.getMonth()+1).padStart(2,"0")};
+  }
+  return null;
+}
+/* 期末月の前月〜申告期限の記録から、業務名で着手した工程を拾う */
+function closingAuto(c, cl){
+  const from=new Date(cl.end.getFullYear(), cl.end.getMonth()-1, 1).getTime();
+  const to=cl.due.getTime()+86400000;
+  const hit={};
+  for(const e of state.entries){
+    if(e.clientId!==c.id || e.start<from || e.start>=to) continue;
+    const task=(e.task||"").trim();
+    for(const st of CLOSE_STAGES) if(st.tasks.includes(task)) hit[st.k]=true;
+    if(/#預り/.test(e.memo||"")) hit.a=true;                          // 資料を預かった＝受領に着手
+  }
+  return hit;
+}
+function closingState(){ return state.closings||(state.closings={}); }
+function closingVal(key,stage){ const o=closingState()[key]; return (o&&o[stage])||0; }   // 0未 1着手 2完了
+function closingBump(key,stage){
+  const st=closingState(); if(!st[key]) st[key]={};
+  st[key][stage]=(st[key][stage]||0)>=2 ? 0 : (st[key][stage]||0)+1;
+  save();
+}
+/* 進行中の決算を、期限が近い順に */
+function closingRows(base){
+  const rows=[];
+  for(const c of state.clients){
+    if(c.kind!=="client" || !c.fy) continue;
+    const cl=currentClosing(c, base); if(!cl) continue;
+    rows.push({c, cl, auto:closingAuto(c,cl)});
+  }
+  return rows.sort((a,b)=>a.cl.due-b.cl.due);
+}
+function drawClosingBoardHTML(){
+  const rows=closingRows();
+  const anyFy=state.clients.some(c=>c.kind==="client"&&c.fy);
+  if(!anyFy) return `<div class="cl-card"><div class="cl-h"><span class="t">決算の進捗</span></div>
+      <div class="hint" style="margin:2px">顧問先に決算月がまだ入っていません。設定→一括登録で
+      <b>543 ナックワン 6</b>（申告期限を延長している会社は末尾に <b>延長</b>）の形で入れると、ここに進捗が出ます。</div></div>`;
+  if(!rows.length) return `<div class="cl-card"><div class="cl-h"><span class="t">決算の進捗</span></div>
+      <div class="hint" style="margin:2px">いま走っている決算はありません（期末月の前月から申告期限まで出ます）。</div></div>`;
+  const today=startOfDay(new Date()).getTime();
+  let h=`<div class="cl-card"><div class="cl-h"><span class="t">決算の進捗</span>
+      <span class="s">${rows.length}社 ・ 破線＝記録から自動で着手・押すと 未→着手→完了</span></div>
+    <table class="cl-tbl"><thead><tr><th class="l">顧問先</th>`;
+  for(const st of CLOSE_STAGES) h+=`<th>${st.label}</th>`;
+  h+=`<th>申告期限</th><th>残り</th></tr></thead><tbody>`;
+  for(const r of rows){
+    const left=Math.round((startOfDay(r.cl.due).getTime()-today)/86400000);
+    h+=`<tr><td class="l"><span class="cl-cli" data-cid="${r.c.id}">
+        <span class="dot" style="background:${r.c.color}"></span>
+        <span class="nm">${esc((r.c.code?r.c.code+" ":"")+r.c.name)}</span>
+        <span class="cl-fy">${r.c.fy}月期${r.c.ext?"・延長":""}</span></span></td>`;
+    for(const st of CLOSE_STAGES){
+      const v=closingVal(r.cl.key,st.k);
+      const auto=v===0 && r.auto[st.k];
+      const cls=v===2?"on":(v===1?"doing":(auto?"doing auto":""));
+      const txt=v===2?"完了":(v===1?"着手":(auto?"着手":"—"));
+      h+=`<td><button class="cl-cell ${cls}" data-key="${r.cl.key}" data-st="${st.k}">${txt}</button></td>`;
+    }
+    h+=`<td class="cl-due">${r.cl.due.getMonth()+1}/${r.cl.due.getDate()}</td>
+        <td class="cl-left${left<=14?" hot":""}">${left<0?`${-left}日超過`:`${left}日`}</td></tr>`;
+  }
+  return h+`</tbody></table></div>`;
+}
+
 function monthCellData(year,month){
   // day番号 -> {min,count,byClient:Map(clientId->min)}  … 俯瞰カレンダー用
   const now=Date.now(); const m=new Map();
@@ -2167,6 +2287,7 @@ function renderAnalysis(){
       <span class="ana-meta">稼働 ${daySet.size}日 ・ ${scoped.length}件 ・ 顧問先 ${nCli}件
         ${cliRows.length?`<button class="sum-copy" id="anaCopy">コピー</button>`:""}</span>
     </div>
+    ${drawClosingBoardHTML()}
     <div class="ana-main">
       <div class="ana-card ov-card">${drawOverviewHTML(y,mo)}</div>
       <div class="ana-card ana-day-card" id="anaDayCard"></div>
@@ -2200,6 +2321,8 @@ function renderAnalysis(){
   const cp=document.getElementById("anaCopy");
   if(cp) cp.onclick=()=>copyText(buildMonthSummaryText(anaMonth,cliRows),null);
   anaInner.querySelectorAll(".sum-row.clickable").forEach(el=>el.onclick=()=>openClientHistory(el.dataset.cid));
+  anaInner.querySelectorAll(".cl-cell").forEach(b=>b.onclick=()=>{ closingBump(b.dataset.key,b.dataset.st); renderAnalysis(); });
+  anaInner.querySelectorAll(".cl-cli").forEach(el=>el.onclick=()=>openClientHistory(el.dataset.cid,"memo"));
   anaInner.querySelectorAll(".ov-cell[data-k]").forEach(b=>b.onclick=()=>{
     if(b.dataset.prev){ const dt=dayFromKey(b.dataset.k); anaMonth=new Date(dt.getFullYear(),dt.getMonth(),1); anaSelDay=b.dataset.k; renderAnalysis(); }
     else selectAnaDay(b.dataset.k);
@@ -3353,24 +3476,31 @@ function paneRender(t){
     const rows=document.getElementById("cliRows");
     clients.forEach(c=>{
       const r=document.createElement("div"); r.className="settings-cli";
-      r.innerHTML=`<span class="dot" style="background:${c.color}"></span><span class="code mono">${esc(c.code)}</span><span class="nm">${esc(c.name)}</span><button class="edit">編集</button>`;
+      r.innerHTML=`<span class="dot" style="background:${c.color}"></span><span class="code mono">${esc(c.code)}</span><span class="nm">${esc(c.name)}</span>${c.fy?`<span class="cl-fy">${c.fy}月期${c.ext?"・延長":""}</span>`:""}<button class="edit">編集</button>`;
       r.querySelector(".edit").onclick=()=>editClient(c.id); rows.appendChild(r);
     });
     if(clients.length===0){ const h=document.createElement("div"); h.className="hint"; h.textContent="顧問先がまだありません。"; rows.appendChild(h); }
   }
   else if(t==="bulk"){
-    pane.innerHTML=`<div class="hint">1行につき「コード␣社名」。既存コードは社名を上書き、新規は色を自動割り当てします。</div>
-      <textarea class="bulk" id="bulkTxt" placeholder="407 Cyres&#10;412 三豊商事&#10;418 アライドカーボン"></textarea>
+    pane.innerHTML=`<div class="hint">1行につき「コード␣社名」。末尾に<b>決算月</b>（1〜12）を足すと決算の進捗に出ます。申告期限を延長している会社はさらに末尾へ<b>延長</b>。<br>例：<b>543 ナックワン 6</b> ／ <b>980 啓明通信工業 12 延長</b>。既存コードは上書き、新規は色を自動割り当てします。</div>
+      <textarea class="bulk" id="bulkTxt" placeholder="407 Cyres 5&#10;543 ナックワン 6&#10;980 啓明通信工業 12 延長"></textarea>
       <div class="actions"><button class="btn-fill" id="bulkGo">まとめて登録</button></div>`;
     document.getElementById("bulkGo").onclick=()=>{
       const lines=document.getElementById("bulkTxt").value.split("\n").map(s=>s.trim()).filter(Boolean);
       let added=0,updated=0;
       for(const ln of lines){
         const m=ln.match(/^(\S+)\s+(.+)$/); if(!m)continue;
-        const code=m[1], name=m[2].trim();
+        const code=m[1];
+        // 社名にも空白が入りうるので、決算月・延長は「末尾から」外していく
+        const parts=m[2].trim().split(/\s+/);
+        let fy=null, ext=false;
+        if(parts.length>1 && /^延長$/.test(parts[parts.length-1])){ ext=true; parts.pop(); }
+        if(parts.length>1 && /^([1-9]|1[0-2])月?$/.test(parts[parts.length-1])){ fy=parseInt(parts.pop(),10); }
+        const name=parts.join(" ").trim(); if(!name) continue;
         const ex=state.clients.find(c=>c.kind==="client"&&c.code===code);
-        if(ex){ ex.name=name; updated++; }
-        else{ state.clients.push({id:uid(),kind:"client",code,name,color:nextColor()}); added++; }
+        if(ex){ ex.name=name; if(fy){ ex.fy=fy; ex.ext=ext; } updated++; }
+        else{ const c={id:uid(),kind:"client",code,name,color:nextColor()};
+              if(fy){ c.fy=fy; c.ext=ext; } state.clients.push(c); added++; }
       }
       save(); toast(`追加${added}件・更新${updated}件`); paneRender("clients");
       document.querySelector('#segTop button[data-t="clients"]').click();
