@@ -61,18 +61,6 @@
     display:grid;place-items:center;color:var(--ink-soft);background:var(--paper-2);
   }
   .icon-btn:hover{border-color:var(--figure);color:var(--ink)}
-
-  /* ヘッダの申告バッジ（計測中でも他の顧問先の申告残に気づけるように） */
-  .fl-badge[hidden]{display:none}
-  .fl-badge{
-    height:38px;padding:0 10px;border-radius:9px;flex:0 0 auto;margin-right:6px;
-    display:flex;align-items:center;gap:4px;cursor:pointer;
-    border:1px solid #B8860B;background:rgba(184,134,11,.10);
-    font-size:12px;font-weight:700;color:#8a6508;
-  }
-  .fl-badge:hover{background:rgba(184,134,11,.20)}
-  .fl-badge .n{font-family:var(--font-mono);font-size:13.5px;line-height:1}
-  .fl-badge.star{border-color:var(--shu);background:rgba(220,74,46,.09);color:var(--shu)}
   .icon-btn svg{width:18px;height:18px}
 
   /* ---------- 作業領域(タイムライン + メモ) ---------- */
@@ -280,6 +268,10 @@
   .brief-h .t{font-size:11.5px;font-weight:700;color:var(--shu);letter-spacing:.02em}
   .brief-h .c{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .brief-h .hist{margin-left:auto;flex:0 0 auto;padding:3px 9px;border-radius:7px;border:1px solid var(--rule-strong);background:var(--paper-2);font-size:11px;font-weight:600;color:var(--ink-soft);cursor:pointer}
+  /* 顧問先名のすぐ右：その顧問先の過去メモへの最短の入口（持ち越しに出ない「それ以外」用） */
+  .brief-h .notes{flex:0 0 auto;margin-left:1px;padding:3px 9px;border-radius:7px;border:1px solid var(--shu);
+    background:var(--paper-2);font-size:11px;font-weight:700;color:var(--shu);cursor:pointer;white-space:nowrap}
+  .brief-h .notes:hover{background:var(--shu-soft)}
   .brief-row{display:flex;align-items:baseline;gap:8px;padding:3px 0;cursor:pointer;border-radius:5px}
   .brief-row:hover{background:rgba(30,42,56,.05)}
   .brief-k{flex:0 0 auto;font-size:10.5px;font-weight:700;border-radius:4px;padding:1px 5px}
@@ -323,6 +315,30 @@
   .fl-msg.ok{border-color:rgba(46,125,107,.4)}
   .fl-msg .bad,.fl-msg.bad{color:var(--shu)}
   .pick-flag.fl{color:#8a6508;border:1px solid #B8860B;background:rgba(184,134,11,.10)}
+
+  /* 申告期限バナー（全体サマリ最上段） */
+  .ov-due{display:flex;align-items:center;gap:9px;width:100%;margin:0 0 9px;padding:9px 12px;border-radius:9px;
+    border:1px solid #B8860B;background:rgba(184,134,11,.10);cursor:pointer;text-align:left}
+  .ov-due:hover{box-shadow:var(--shadow)}
+  .ov-due.hot{border-color:var(--shu);background:var(--shu-soft)}
+  .ov-due-t{font-size:11px;font-weight:800;color:#8a6508;flex:0 0 auto}
+  .ov-due.hot .ov-due-t{color:var(--shu)}
+  .ov-due-n{font-size:12.5px;font-weight:700;color:var(--ink);flex:1 1 auto}
+  .ov-due-go{font-size:11.5px;font-weight:700;color:var(--figure);flex:0 0 auto}
+
+  /* 申告期限の確認シート */
+  .due-sec{margin:16px 2px 7px;font-family:var(--font-disp);font-weight:700;font-size:14px;color:var(--ink);
+    border-bottom:1px solid var(--rule-strong);padding-bottom:4px}
+  .due-sec.overdue{color:var(--shu)} .due-sec.today{color:#8a6508}
+  .due-secn{font-family:var(--font-mono);font-size:12px;color:var(--figure);margin-left:6px}
+  .due-row{display:flex;align-items:center;gap:11px;padding:11px 12px;margin:0 0 7px;border-radius:10px;
+    background:var(--paper-2);border:1px solid var(--rule);cursor:pointer;transition:box-shadow .12s}
+  .due-row:hover{box-shadow:var(--shadow)}
+  .due-box{flex:0 0 auto;width:20px;height:20px;border:2px solid var(--rule-strong);border-radius:6px}
+  .due-body{flex:1 1 auto;display:flex;flex-direction:column;gap:2px;min-width:0}
+  .due-cli{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--figure)}
+  .due-task{font-size:14px;font-weight:600;color:var(--ink);word-break:break-word}
+  .due-date{flex:0 0 auto;font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--ink-soft)}
   .brief-j{flex:0 0 auto;padding:2px 8px;border-radius:6px;border:1px solid #2B5FA8;background:var(--paper-2);font-size:10.5px;font-weight:700;color:#2B5FA8;cursor:pointer}
   .brief-prev{background:var(--paper);border:1px solid var(--rule);border-radius:9px;padding:8px 11px;margin:0 0 9px}
   .pv-h{display:flex;align-items:center;gap:8px;margin-bottom:5px}
@@ -469,10 +485,6 @@
     background:var(--paper);font-size:14px;font-weight:600;
   }
   .chip:hover{border-color:var(--figure)}
-  .chip.sm{padding:8px 12px;font-size:13px}
-  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-  .chip.on:hover{border-color:var(--ink)}
-  .field .task-free{margin-top:8px}
 
   .field{margin:12px 4px}
   .field label{display:block;font-size:11px;color:var(--figure);font-weight:600;margin-bottom:5px}
@@ -513,14 +525,6 @@
   .tasklist-item .mv:disabled{opacity:.28;cursor:default}
   .tasklist-item .x{color:var(--shu);padding:6px 9px;border-radius:7px;font-size:16px}
   .tasklist-item .x:hover{background:var(--shu-soft)}
-  .tasklist-item .grip{
-    flex:0 0 auto;width:22px;text-align:center;line-height:1;font-size:15px;
-    color:var(--figure);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;
-  }
-  .tasklist-item .grip:hover{color:var(--ink)}
-  .tasklist-item .grip:active{cursor:grabbing}
-  .tasklist-item.dragging{background:var(--paper-2);border-radius:9px;box-shadow:var(--shadow);opacity:.95;border-bottom-color:transparent}
-  body.dragging-task{user-select:none;-webkit-user-select:none}
   .add-inline{display:flex;gap:8px;margin-top:8px}
   .add-inline input{flex:1}
   .add-inline button{padding:0 16px;border-radius:9px;background:var(--ink);color:#fff;font-weight:700}
@@ -688,6 +692,24 @@
   .ch-chips{display:flex;gap:6px;margin:0 4px 8px;flex-wrap:wrap}
   .ch-chip{padding:7px 13px;border-radius:9px;border:1px solid var(--rule-strong);background:var(--paper);font-size:12px;font-weight:600;color:var(--ink-soft)}
   .ch-chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  /* 顧問先シートの「メモ」タブ（過去メモを計測画面から離れずに読む） */
+  .chm-bar{display:flex;gap:8px;margin:0 4px 8px}
+  .chm-search{flex:1;min-width:0;padding:9px 12px;border:1px solid var(--rule-strong);border-radius:9px;
+    background:var(--paper);font-size:13px;color:var(--ink);font-family:inherit}
+  .chm-search:focus{outline:none;border-color:var(--shu)}
+  .chm-chips{display:flex;gap:6px;margin:0 4px 8px;flex-wrap:wrap}
+  .chm-chip{padding:6px 12px;border-radius:9px;border:1px solid var(--rule-strong);background:var(--paper);font-size:12px;font-weight:600;color:var(--ink-soft);cursor:pointer}
+  .chm-chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chm-chip .chm-n{margin-left:5px;font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--figure)}
+  .chm-chip.has:not(.on){border-color:var(--shu);color:var(--shu)}
+  .chm-chip.has:not(.on) .chm-n{color:var(--shu)}
+  .chm-chip.on .chm-n{color:rgba(255,255,255,.75)}
+  .chm-card{cursor:default}
+  .chm-card:hover{box-shadow:none;border-left-color:var(--rule-strong)}
+  .chm-go{font-family:var(--font-mono);font-size:11.5px;font-weight:700;color:var(--ink-soft);flex:0 0 auto;
+    padding:1px 6px;border:1px solid var(--rule-strong);border-radius:6px;background:var(--paper);cursor:pointer}
+  .chm-go:hover{border-color:var(--ink);color:var(--ink)}
+  .chm-ago{font-family:var(--font-mono);font-size:11px;color:var(--figure);flex:0 0 auto}
   .ch-views{display:inline-flex;border:1px solid var(--rule-strong);border-radius:9px;overflow:hidden;margin:0 4px 12px}
   .ch-views button{padding:7px 16px;font-size:12px;font-weight:700;color:var(--figure);background:var(--paper)}
   .ch-views button.on{background:var(--ink);color:#fff}
@@ -730,7 +752,6 @@
   <span class="ana-head-title" id="anaHeadTitle" hidden>ふりかえり</span>
   <span class="ana-head-title" id="memoHeadTitle" hidden>メモ</span>
   <div class="spacer"></div>
-  <button class="fl-badge" id="flBadge" hidden>申<span class="n"></span></button>
   <button class="icon-btn" id="memoBtn" aria-label="メモ" title="メモ（横断して読み返す・検索）">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 10h16M4 15h10"/><circle cx="17.5" cy="17.5" r="3.5"/><path d="M20 20l2.5 2.5"/></svg>
   </button>
@@ -988,37 +1009,6 @@ const DOW=["日","月","火","水","木","金","土"];
 function renderHeader(){
   document.getElementById("dateH").textContent=(selDate.getMonth()+1)+"月"+selDate.getDate()+"日";
   document.getElementById("dateDow").textContent="("+DOW[selDate.getDay()]+")";
-  renderFilingBadge();
-}
-
-/* ヘッダの申告バッジ。
-   いまブリーフに出ていない申告（＝取りこぼす可能性のあるぶん）だけを控えめに示す。
-   ・計測なし×今日 … 「持ち越し（全顧問先）」が全件出しているので出さない
-   ・計測あり       … その顧問先ぶんはブリーフに出るので、それを差し引いた他社ぶん
-   ・過去日を閲覧中 … ブリーフが出ないので全件 */
-function unseenFilings(){
-  const all=allOpenFilings();
-  if(!all.n) return {n:0,star:0};
-  const run=runningEntry();
-  const runHere=run && isSameDay(new Date(run.start),selDate);
-  if(!runHere) return isSameDay(selDate,new Date()) ? {n:0,star:0} : all;
-  const ym=currentYM(), mine=String(run.clientId);
-  let n=0,star=0;
-  for(const cid of Object.keys(state.filings||{})){
-    if(cid===mine) continue;
-    for(const f of state.filings[cid]) if(f.ym===ym && !f.done){ n++; if(f.star) star++; }
-  }
-  return {n,star};
-}
-function renderFilingBadge(){
-  const b=document.getElementById("flBadge"); if(!b) return;
-  const {n,star}=unseenFilings();
-  b.hidden=!n;
-  if(!n) return;
-  b.classList.toggle("star",!!star);
-  b.querySelector(".n").textContent=n;
-  b.title=`他の顧問先の今月の申告 残${n}件${star?`（重要 ${star}）`:""} … タップで一覧`;
-  b.onclick=()=>openSettings("filings");
 }
 document.getElementById("todayBtn").onclick=()=>{ selDate=startOfDay(new Date()); renderAll(); scrollToRelevant(); };
 document.getElementById("prevBtn").onclick=()=>{ selDate=new Date(selDate.getTime()-86400000); renderAll(); };
@@ -1520,8 +1510,8 @@ function openEditEntry(id){
   sheetBody.innerHTML=`
     <div class="field"><label>顧問先</label><select id="edCli">${cliOpts}</select></div>
     <div class="field"><label>業務内容</label>
-      <div class="chip-wrap" id="edChips"></div>
-      <input id="edTask" class="task-free" value="${esc(e.task||"")}" autocomplete="off" placeholder="一覧にない業務は直接入力">
+      <input id="edTask" list="taskDL" value="${esc(e.task||"")}" autocomplete="off">
+      <datalist id="taskDL"></datalist>
     </div>
     <div class="row2">
       <div class="field"><label>開始</label>${tfWrap("edStart",fmtTime(e.start))}</div>
@@ -1537,29 +1527,10 @@ function openEditEntry(id){
       ${!running?`<button class="btn-ghost" id="edDup" style="flex:1">複製</button>`:""}
       <button class="btn-danger" id="edDel" style="flex:1">削除</button>
     </div>`;
-  // 業務内容はチップで選ぶ（datalist だと既存の値で候補が絞られて選べないため）。
-  // 顧問先を変えると業務セット（顧問先／社内）も追随する。一覧にないものは下の欄に直接入力。
-  const edTaskEl=document.getElementById("edTask");
-  const fillChips=()=>{
-    const c=getClient(document.getElementById("edCli").value);
-    const set=(c && state.tasks[taskSetFor(c)]) || [];
-    const cur=edTaskEl.value.trim();
-    const wrap=document.getElementById("edChips");
-    wrap.innerHTML="";
-    if(!set.length){
-      wrap.innerHTML=`<div class="hint" style="margin:0">この種別の業務がまだ登録されていません。下の欄に直接入力できます。</div>`;
-      return;
-    }
-    set.forEach(t=>{
-      const b=document.createElement("button");
-      b.type="button"; b.className="chip sm"+(t===cur?" on":""); b.textContent=t;
-      b.onclick=()=>{ edTaskEl.value=t; fillChips(); };
-      wrap.appendChild(b);
-    });
-  };
-  document.getElementById("edCli").onchange=fillChips;
-  edTaskEl.addEventListener("input",fillChips);
-  fillChips();
+  // datalist を顧問先種別に追随
+  const fillDL=()=>{ const c=getClient(document.getElementById("edCli").value); const set=state.tasks[taskSetFor(c)];
+    document.getElementById("taskDL").innerHTML=set.map(t=>`<option value="${esc(t)}">`).join(""); };
+  document.getElementById("edCli").onchange=fillDL; fillDL();
   initTF(sheetBody);
 
   document.getElementById("edSave").onclick=()=>{
@@ -1668,13 +1639,27 @@ function renderBrief(){
     const issN=issueLedger().length, issStale=issueLedger().filter(h=>daysAgo(h.ms)>=30).length;
     let todoN=0; for(const l of todoMap().values()) todoN+=l.length;
     const fl=allOpenFilings();
-    if(!holdN && !issN && !todoN && !fl.n) return;
+    const ds=dueSoonSummary();
+    if(!holdN && !issN && !todoN && !fl.n && !ds.list.length) return;
 
     const pill=(cls,txt,mode,stale)=>`<button class="ov-pill${stale?" stale":""}" data-mode="${mode}">
         <span class="ov-k ${cls}"></span>${txt}</button>`;
     const box=document.createElement("div"); box.className="brief overview";
+    // 期限が迫った申告は最上段に別立てで（事務所の全体確認の前に自分の分の詰みを潰す用）
+    let dueBanner="";
+    if(ds.list.length){
+      const hot=ds.urgent>0;
+      const label = ds.overdue? `超過 ${ds.overdue}件` : "";
+      const tod = ds.today? `本日 ${ds.today}件` : "";
+      const soon = ds.soon? `まもなく ${ds.soon}件` : "";
+      const parts=[label,tod,soon].filter(Boolean).join(" ・ ");
+      dueBanner=`<button class="ov-due${hot?" hot":""}" id="ovDue">
+          <span class="ov-due-t">申告期限</span><span class="ov-due-n">${parts}</span>
+          <span class="ov-due-go">確認 ›</span></button>`;
+    }
     box.innerHTML=`<div class="brief-h"><span class="t">持ち越し（全顧問先）</span>
         <span class="c">計測を始めると、その顧問先ぶんがここに出ます</span></div>
+      ${dueBanner}
       <div class="ov-pills">
         ${fl.n?pill("fl",`今月の申告 残${fl.n}件${fl.star?`（重要 ${fl.star}）`:""}`,"__filings",fl.star):""}
         ${holdN?pill("hold",`預り ${holdN}件${holdStale?`（14日↑ ${holdStale}）`:""}`,"hold",holdStale):""}
@@ -1682,6 +1667,8 @@ function renderBrief(){
         ${todoN?pill("todo",`未完 ${todoN}件`,"todo",false):""}
       </div>`;
     slot.appendChild(box);
+    const dueBtn=box.querySelector("#ovDue");
+    if(dueBtn) dueBtn.onclick=()=>openDueSheet();
     box.querySelectorAll(".ov-pill").forEach(b=>b.onclick=()=>{
       if(b.dataset.mode==="__filings") openSettings("filings");
       else setView("memo",b.dataset.mode);
@@ -1720,6 +1707,7 @@ function renderBrief(){
   box.innerHTML=`<div class="brief-h">
       <span class="t">前回までの持ち越し</span>
       <span class="c">${esc((c.code?c.code+" ":"")+c.name)}</span>
+      <button class="notes" id="briefNotes" title="この顧問先の過去メモを検索して読む">メモ</button>
       <button class="hist" id="briefMat">報告材料</button>
       <button class="hist" id="briefHist">履歴</button>
     </div>`+prevHTML+filingHTML(filings)+
@@ -1744,7 +1732,9 @@ function renderBrief(){
       btn.textContent=open?"閉じる":"全文"; };
   }
 
-  box.querySelector("#briefHist").onclick=ev=>{ ev.stopPropagation(); openClientHistory(run.clientId); };
+  // 顧問先名の右の「メモ」＝持ち越しに出ない過去メモへの最短の入口（シートで重なるので計測画面に戻れる）
+  box.querySelector("#briefNotes").onclick=ev=>{ ev.stopPropagation(); openClientHistory(run.clientId,"memo"); };
+  box.querySelector("#briefHist").onclick=ev=>{ ev.stopPropagation(); openClientHistory(run.clientId,"list"); };
   box.querySelector("#briefMat").onclick=ev=>{
     ev.stopPropagation();
     const d=startOfDay(selDate), s0=d.getTime(), e0=s0+86400000;
@@ -2394,7 +2384,12 @@ function buildMonthSummaryText(d, cliRows){
    ④ 顧問先で絞って履歴（集計パネルの行タップで開く）
 ============================================================ */
 let chPeriod="month";   // "month" | "prev" | "3m" | "all"
-let chView="list";      // "list"(一覧) | "day"(日別) | "sum"(集計)
+let chView="list";      // "memo"(メモ) | "list"(一覧) | "day"(日別) | "sum"(集計)
+/* メモタブは工数タブと期間・検索を共有しない（読む目的と数える目的で欲しい範囲が違う）。
+   既定は全期間・新しい順＝「去年の同じ時期に何をしたか」を探すのが主な用途 */
+let chMemoQ="";
+let chMemoPeriod="all"; // "month" | "3m" | "1y" | "ly"(去年の同時期) | "all"
+let chMemoComposing=false;  // 日本語入力の変換中は一覧を描き直さない
 function chRange(){
   const t=startOfDay(new Date());
   const y=t.getFullYear(), mo=t.getMonth();
@@ -2496,6 +2491,22 @@ function decisionLog(){
      429 | 簡易課税選択届 | 8/31 ★     ← ★=重要（届出期限など落とせないもの）
    コードは関与先コードで顧問先に対応付ける。一致しないコードは取込結果で報告する。
 ============================================================ */
+/* 期限文字列（"8/31"など）を YYYY-MM-DD に正規化する。
+   基準は取込ヘッダの ym（例 2026-08）。月が戻る場合（12月取込の1/31など）は翌年扱い。
+   すでに YYYY-MM-DD 形式ならそのまま。読めなければ null（＝日付判定の対象外）。 */
+function normalizeDue(due, ym){
+  const s=String(due||"").trim();
+  if(!s) return null;
+  let m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+  if(m) return `${m[1]}-${String(+m[2]).padStart(2,"0")}-${String(+m[3]).padStart(2,"0")}`;
+  m=s.match(/(\d{1,2})[\/月](\d{1,2})/);           // "8/31" "8月31" など
+  if(!m) return null;
+  const mo=+m[1], d=+m[2];
+  const [by,bm]=(ym||currentYM()).split("-").map(Number);
+  let yr=by; if(mo<bm) yr=by+1;                    // 取込月より小さい月＝翌年（年跨ぎ）
+  return `${yr}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+}
+
 function currentYM(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
 
 function parseFilingBlock(text){
@@ -2538,7 +2549,7 @@ function importFilings(text){
     if(!cid){ unmatched.push(r.code+"（"+r.task+"）"); continue; }
     if(!state.filings[cid]) state.filings[cid]=[];
     state.filings[cid].push({
-      id:uid(), ym, task:r.task, due:r.due, star:r.star,
+      id:uid(), ym, task:r.task, due:r.due, dueISO:normalizeDue(r.due, ym), star:r.star,
       done: prevDone.get(cid+"|"+r.task)||false
     });
     added++;
@@ -2561,6 +2572,73 @@ function allOpenFilings(ym){
     for(const f of state.filings[cid]) if(f.ym===ym && !f.done){ n++; if(f.star) star++; }
   return {n, star};
 }
+/* 期限が近い／過ぎた未完の申告を、全顧問先から集める。
+   LEAD日前から予告。今月ぶんに限らず dueISO を持つ未完すべてを対象にする（年跨ぎでも拾える）。
+   区分: overdue=期限超過, today=本日, soon=LEAD日以内。日付順（近い順）。 */
+const FILING_LEAD_DAYS=3;
+function dueSoonFilings(){
+  const today=startOfDay(new Date()).getTime();
+  const lead=today+FILING_LEAD_DAYS*86400000;
+  const out=[];
+  for(const cid of Object.keys(state.filings||{})){
+    for(const f of state.filings[cid]){
+      if(f.done || !f.dueISO) continue;
+      const dt=dayFromKey(f.dueISO); if(!dt) continue;
+      const dms=startOfDay(dt).getTime();
+      if(dms>lead) continue;                       // まだ先（予告範囲外）
+      const bucket = dms<today ? "overdue" : (dms===today ? "today" : "soon");
+      out.push({clientId:cid, task:f.task, due:f.due, dueISO:f.dueISO, dms, star:f.star, id:f.id, bucket});
+    }
+  }
+  return out.sort((a,b)=>a.dms-b.dms);
+}
+function dueSoonSummary(){
+  const list=dueSoonFilings();
+  let overdue=0, today=0, soon=0, star=0;
+  for(const x of list){ if(x.bucket==="overdue")overdue++; else if(x.bucket==="today")today++; else soon++; if(x.star)star++; }
+  return {list, overdue, today, soon, star, urgent:overdue+today};
+}
+
+/* 申告期限の確認シート。期限が近い/過ぎた未完を、超過→本日→まもなく の順で。
+   事務所の全体確認の前に、自分の担当で残っているものを一望する用。チェックでその場で消せる。 */
+function openDueSheet(){
+  drawDueSheet();
+  openSheet();
+}
+function drawDueSheet(){
+  const ds=dueSoonSummary();
+  const secTitle={overdue:"⚠ 期限超過", today:"本日期限", soon:`まもなく期限（${FILING_LEAD_DAYS}日以内）`};
+  const order=["overdue","today","soon"];
+  let body="";
+  if(!ds.list.length){
+    body=`<div class="hint" style="margin:20px 4px">${FILING_LEAD_DAYS}日以内に期限の未完の申告はありません。</div>`;
+  }else{
+    for(const bk of order){
+      const rows=ds.list.filter(x=>x.bucket===bk);
+      if(!rows.length) continue;
+      body+=`<div class="due-sec ${bk}">${secTitle[bk]} <span class="due-secn">${rows.length}</span></div>`;
+      for(const x of rows){
+        const c=getClient(x.clientId); const d=dayFromKey(x.dueISO);
+        const dd=`${d.getMonth()+1}/${d.getDate()}`;
+        body+=`<div class="due-row" data-cid="${x.clientId}" data-fid="${x.id}">
+          <span class="due-box"></span>
+          <span class="due-body">
+            <span class="due-cli"><span class="dot" style="background:${c.color}"></span>${esc((c.code?c.code+" ":"")+c.name)}</span>
+            <span class="due-task">${esc(x.task)}${x.star?` <span class="fl-star">重要</span>`:""}</span>
+          </span>
+          <span class="due-date">${dd}</span></div>`;
+      }
+    }
+  }
+  sheetHead.innerHTML=`<h2>申告期限の確認</h2>`;
+  sheetBody.innerHTML=`
+    <div class="hint" style="margin:0 2px 10px">担当分の残りを期限順に。チェックすると完了として消えます。全体確認の前の自己点検用です。</div>
+    <div id="dueList">${body}</div>`;
+  sheetBody.querySelectorAll(".due-row").forEach(el=>el.onclick=()=>{
+    if(toggleFiling(el.dataset.cid, el.dataset.fid)){ drawDueSheet(); renderAll(); }
+  });
+}
+
 function toggleFiling(clientId, fid){
   const list=state.filings&&state.filings[clientId]; if(!list) return false;
   const f=list.find(x=>x.id===fid); if(!f) return false;
@@ -2892,9 +2970,111 @@ function renderMemoList(){
   };
 }
 
-function openClientHistory(clientId){
+function openClientHistory(clientId, view){
   const c=getClient(clientId);
+  if(view) chView=view;          // ブリーフの「メモ」ボタンからは最初からメモタブで開く
   drawClientHistory(c); openSheet();
+}
+
+/* ============================================================
+   顧問先シートの「メモ」タブ
+   持ち越し（預り・論点・未完・前回メモ）に出るのは“重要なものだけ”。
+   それ以外を読みに行く道が遠いと、中断復帰のときに読みに行かなくなる。
+   → 計測画面から離れず（シートのまま）、その顧問先のメモだけを新しい順に。
+============================================================ */
+/* 去年の同じ月を中心に前後1ヶ月。決算月で回る仕事は、去年の同時期に今年と同じ論点が出ている。
+   月ちょうどで切ると「先月やった相談」を落とすので前後を1ヶ月ずつ広げる */
+function lastYearWindow(){
+  const t=startOfDay(new Date());
+  const y=t.getFullYear(), mo=t.getMonth();
+  const s=new Date(y-1,mo-1,1), e=new Date(y-1,mo+2,1), last=new Date(y-1,mo+1,1);
+  return {s:s.getTime(), e:e.getTime(),
+    label:`去年の同時期（${s.getFullYear()}/${s.getMonth()+1}〜${last.getFullYear()}/${last.getMonth()+1}）`};
+}
+function chMemoRange(){
+  const t=startOfDay(new Date());
+  const y=t.getFullYear(), mo=t.getMonth();
+  if(chMemoPeriod==="month") return {s:new Date(y,mo,1).getTime(), e:Infinity, label:"今月"};
+  if(chMemoPeriod==="3m")    return {s:new Date(y,mo-2,1).getTime(), e:Infinity, label:"直近3ヶ月"};
+  if(chMemoPeriod==="1y")    return {s:new Date(y-1,mo,1).getTime(), e:Infinity, label:"1年"};
+  if(chMemoPeriod==="ly")    return lastYearWindow();
+  return {s:-Infinity, e:Infinity, label:"全期間"};
+}
+/* 「去年の同時期」にメモが何件あるかはチップに出す（押す前に、見に行く価値があるか分かるように） */
+function chMemoLastYearCount(c){
+  const w=lastYearWindow(); let n=0;
+  for(const x of state.entries)
+    if(x.clientId===c.id && (x.memo||"").trim() && x.start>=w.s && x.start<w.e) n++;
+  return n;
+}
+/* その顧問先のメモだけ。全体メモ(dayMemos)は顧問先に属さないので入れない（メモ画面と同じ扱い） */
+function chMemoItems(c){
+  const r=chMemoRange(), q=chMemoQ.trim().toLowerCase(), now=Date.now();
+  const out=[];
+  for(const e of state.entries){
+    if(e.clientId!==c.id) continue;
+    const memo=(e.memo||"").trim(); if(!memo) continue;
+    if(e.start<r.s || e.start>=r.e) continue;
+    if(q && !(memo.toLowerCase().includes(q) || (e.task||"").toLowerCase().includes(q))) continue;
+    out.push({ms:e.start, e, memo, dur:((e.end||now)-e.start)/60000});
+  }
+  return out.sort((a,b)=>b.ms-a.ms);   // 新しい順
+}
+function chMemoCardHTML(it){
+  const d=new Date(it.ms);
+  const date=`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}（${DOW[d.getDay()]}）`;
+  return `<div class="me-card chm-card">
+    <div class="me-top">
+      <button class="chm-go" data-ms="${it.ms}" title="この日の記録へ">${date}</button>
+      <span class="me-task">${hlt(it.e.task||"(業務未設定)",chMemoQ)}</span>
+      <span class="chm-ago">${agoLabel(it.ms)}</span>
+      <span class="me-time">${fmtTime(it.e.start)}–${it.e.end?fmtTime(it.e.end):"…"} · ${fmtDurShort(it.dur)}</span>
+    </div>
+    <div class="me-body">${meBodyHTML(it.memo,chMemoQ,{kind:"entry",id:it.e.id})}</div></div>`;
+}
+/* 一覧とメタだけを描き直す（検索欄は触らない＝IMEの変換とカーソルを壊さない） */
+function chMemoRefresh(c){
+  const list=document.getElementById("chmList"), meta=document.getElementById("chmMeta");
+  if(!list||!meta) return;
+  const items=chMemoItems(c), r=chMemoRange();
+  const q=chMemoQ.trim();
+  if(!items.length){
+    list.innerHTML=`<div class="hint" style="margin:20px 4px">${q
+      ? `「${esc(q)}」に一致するメモはありません。`
+      : `${r.label}のメモはありません。`}</div>`;
+  }else{
+    let body="", curY="";
+    for(const it of items){
+      const ym=new Date(it.ms).getFullYear()+"";
+      if(ym!==curY){ curY=ym; body+=`<div class="me-group">${ym}年</div>`; }
+      body+=chMemoCardHTML(it);
+    }
+    list.innerHTML=body;
+  }
+  let openN=0; for(const it of items) openN+=scanMemo(it.memo).todos.filter(t=>!t.done).length;
+  meta.innerHTML=`${r.label} ・ ${items.length}件${openN?` ・ 未完 ${openN}件`:""}`+
+    `${items.length?`<button class="me-copy" id="chmCopy">コピー</button>`:""}`;
+
+  list.querySelectorAll(".chm-go").forEach(b=>b.onclick=ev=>{
+    ev.stopPropagation();
+    closeSheet();
+    selDate=startOfDay(new Date(Number(b.dataset.ms)));
+    setView("log");
+  });
+  list.querySelectorAll(".me-todo").forEach(el=>el.onclick=ev=>{
+    ev.stopPropagation();
+    if(toggleTodoEntry(el.dataset.id,Number(el.dataset.line))){ chMemoRefresh(c); renderAll(); }
+  });
+  const cp=document.getElementById("chmCopy");
+  if(cp) cp.onclick=()=>{
+    const L=[`# ${(c.code?c.code+" ":"")+c.name} メモ（${r.label}${q?` / 「${q}」`:""}）`];
+    for(const it of items){
+      const d=new Date(it.ms);
+      L.push("",`## ${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}（${DOW[d.getDay()]}）${it.e.task?" "+it.e.task:""}`);
+      it.memo.split(/\r?\n/).forEach(x=>{ if(x.trim()) L.push(`- ${x.trim()}`); });
+    }
+    copyText(L.join("\n"),null);
+  };
 }
 function drawClientHistory(c){
   const now=Date.now();
@@ -2913,11 +3093,23 @@ function drawClientHistory(c){
   sheetHead.innerHTML=`<button class="back" id="chBack">‹</button><h2>顧問先の履歴</h2>`;
   const chips=[["month","今月"],["prev","先月"],["3m","3ヶ月"],["all","全期間"]]
     .map(([k,l])=>`<button class="ch-chip${chPeriod===k?" on":""}" data-p="${k}">${l}</button>`).join("");
-  const views=[["list","一覧"],["day","日別"],["sum","集計"]]
+  const views=[["memo","メモ"],["list","一覧"],["day","日別"],["sum","集計"]]
     .map(([k,l])=>`<button data-v="${k}" class="${chView===k?"on":""}">${l}</button>`).join("");
+  const lyN=chMemoLastYearCount(c);
+  const memoChips=[["month","今月"],["3m","3ヶ月"],["1y","1年"],["ly","去年の同時期"],["all","全期間"]]
+    .map(([k,l])=>`<button class="chm-chip${chMemoPeriod===k?" on":""}${k==="ly"&&lyN?" has":""}" data-p="${k}">${l}${
+      k==="ly"?`<span class="chm-n">${lyN}</span>`:""}</button>`).join("");
 
   let body="";
-  if(rows.length===0){
+  if(chView==="memo"){
+    body=`<div class="chm-bar">
+        <input class="chm-search" id="chmSearch" type="search" placeholder="この顧問先のメモを検索…" value="${esc(chMemoQ)}">
+      </div>
+      <div class="chm-chips">${memoChips}</div>
+      <div class="me-meta" id="chmMeta"></div>
+      <div id="chmList"></div>`;
+  }
+  else if(rows.length===0){
     body=`<div class="hint" style="margin:14px 6px">${r.label}の記録はありません。</div>`;
   }
   else if(chView==="sum"){
@@ -2946,20 +3138,37 @@ function drawClientHistory(c){
     for(const e of rows) body+=chRowHTML(e,now,true);
   }
 
+  // メモタブでは工数の期間チップ・合計を出さない（メモタブは自前の期間を持つ。数字と混ざると読み違える）
+  const isMemo = chView==="memo";
   sheetBody.innerHTML=`
     <div class="ch-head">
       <span class="ch-dot" style="background:${c.color}"></span>
       <span class="ch-name">${esc((c.code?c.code+" ":"")+c.name)}</span>
-      <span class="ch-total">${fmtDur(total)}</span>
+      ${isMemo?"":`<span class="ch-total">${fmtDur(total)}</span>`}
     </div>
-    <div class="ch-chips">${chips}<span style="flex:1"></span><button class="me-copy" id="chMat">報告材料</button></div>
+    ${isMemo?"":`<div class="ch-chips">${chips}<span style="flex:1"></span><button class="me-copy" id="chMat">報告材料</button></div>`}
     <div class="ch-views">${views}</div>
     <div id="chBody">${body}</div>`;
 
   document.getElementById("chBack").onclick=closeSheet;
-  document.getElementById("chMat").onclick=()=>copyText(buildAuditMaterial(c.id,r.s,r.e,r.label),null);
+  const mat=document.getElementById("chMat");
+  if(mat) mat.onclick=()=>copyText(buildAuditMaterial(c.id,r.s,r.e,r.label),null);
   sheetBody.querySelectorAll(".ch-chip").forEach(b=>b.onclick=()=>{ chPeriod=b.dataset.p; drawClientHistory(c); });
   sheetBody.querySelectorAll(".ch-views button").forEach(b=>b.onclick=()=>{ chView=b.dataset.v; drawClientHistory(c); });
+
+  if(isMemo){
+    const sb=document.getElementById("chmSearch");
+    sb.addEventListener("compositionstart",()=>{ chMemoComposing=true; });
+    sb.addEventListener("compositionend",()=>{ chMemoComposing=false; chMemoQ=sb.value; chMemoRefresh(c); });
+    sb.addEventListener("input",()=>{ if(chMemoComposing) return; chMemoQ=sb.value; chMemoRefresh(c); });
+    sheetBody.querySelectorAll(".chm-chip").forEach(b=>b.onclick=()=>{
+      chMemoPeriod=b.dataset.p;
+      sheetBody.querySelectorAll(".chm-chip").forEach(x=>x.classList.toggle("on",x.dataset.p===chMemoPeriod));
+      chMemoRefresh(c);            // 検索欄は作り直さない（変換中の文字が消えないように）
+    });
+    chMemoRefresh(c);
+    return;
+  }
   sheetBody.querySelectorAll(".ch-row[data-id]").forEach(el=>el.onclick=()=>openEditEntry(el.dataset.id));
   const cp=document.getElementById("chCopy");
   if(cp) cp.onclick=()=>{
@@ -3226,7 +3435,7 @@ function filingsPaneRender(){
     renderAll();
   };
   pane.querySelectorAll("#flList .fl-row").forEach(el=>el.onclick=()=>{
-    if(toggleFiling(el.dataset.cid, el.dataset.fid)){ filingsPaneRender(); renderAll(); }
+    if(toggleFiling(el.dataset.cid, el.dataset.fid)){ filingsPaneRender(); }
   });
 }
 
@@ -3270,60 +3479,15 @@ function importData(file){
   };
   r.readAsText(file);
 }
-/* 業務一覧のドラッグ並べ替え。
-   HTML5 の draggable はタッチで効かないので Pointer Events で実装する。
-   掴んでいる間は DOM を直接入れ替えて見た目を追随させ、離した時点で state に確定する。 */
-function startTaskDrag(ev,row,items,k){
-  if(ev.button!==undefined && ev.button!==0) return;
-  ev.preventDefault();
-  const grip=ev.currentTarget;
-  try{ grip.setPointerCapture(ev.pointerId); }catch(_){}
-  row.classList.add("dragging");
-  document.body.classList.add("dragging-task");
-
-  const move=e=>{
-    const y=e.clientY;
-    // 1イベントで複数段ぶん動くこともあるので、落ち着くまで繰り返す（速く振ったときの取り残し防止）
-    for(let guard=0;guard<64;guard++){
-      let moved=false;
-      for(const other of items.querySelectorAll(".tasklist-item")){
-        if(other===row) continue;
-        const r=other.getBoundingClientRect(), mid=r.top+r.height/2;
-        const rowIsAfter = !!(other.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING);
-        if(y<mid && rowIsAfter){ items.insertBefore(row,other); moved=true; break; }
-        if(y>mid && !rowIsAfter){ items.insertBefore(row,other.nextSibling); moved=true; break; }
-      }
-      if(!moved) break;
-    }
-  };
-  const end=()=>{
-    grip.removeEventListener("pointermove",move);
-    grip.removeEventListener("pointerup",end);
-    grip.removeEventListener("pointercancel",end);
-    row.classList.remove("dragging");
-    document.body.classList.remove("dragging-task");
-    const next=[...items.querySelectorAll(".tasklist-item")].map(el=>state.tasks[k][Number(el.dataset.i)]);
-    if(next.length===state.tasks[k].length && next.every(v=>v!==undefined)){
-      state.tasks[k].length=0; state.tasks[k].push(...next); save();
-    }
-    taskPaneRender(k);
-  };
-  grip.addEventListener("pointermove",move);
-  grip.addEventListener("pointerup",end);
-  grip.addEventListener("pointercancel",end);
-}
-
 function taskPaneRender(k){
   const pane=document.getElementById("taskPane");
   const list=state.tasks[k];
-  pane.innerHTML=`<div class="hint">左の ⠿ をつまむと並べ替えられます（▲▼でも動きます）。この並び順が、計測開始と記録の修正でそのまま出ます。</div>
-    <div id="taskItems"></div>
+  pane.innerHTML=`<div id="taskItems"></div>
     <div class="add-inline"><input id="newTask" placeholder="業務を追加" autocomplete="off"><button id="newTaskGo">追加</button></div>`;
   const items=document.getElementById("taskItems");
   list.forEach((t,i)=>{
-    const row=document.createElement("div"); row.className="tasklist-item"; row.dataset.i=i;
-    row.innerHTML=`<span class="grip" title="ドラッグして並べ替え">⠿</span>
-      <span class="ord">
+    const row=document.createElement("div"); row.className="tasklist-item";
+    row.innerHTML=`<span class="ord">
         <button class="mv up" aria-label="上へ"${i===0?" disabled":""}>▲</button>
         <button class="mv dn" aria-label="下へ"${i===list.length-1?" disabled":""}>▼</button>
       </span>
@@ -3331,7 +3495,6 @@ function taskPaneRender(k){
     row.querySelector(".up").onclick=()=>{ if(i>0){ [list[i-1],list[i]]=[list[i],list[i-1]]; save(); taskPaneRender(k); } };
     row.querySelector(".dn").onclick=()=>{ if(i<list.length-1){ [list[i+1],list[i]]=[list[i],list[i+1]]; save(); taskPaneRender(k); } };
     row.querySelector(".x").onclick=()=>{ list.splice(i,1); save(); taskPaneRender(k); };
-    row.querySelector(".grip").addEventListener("pointerdown",ev=>startTaskDrag(ev,row,items,k));
     items.appendChild(row);
   });
   const add=()=>{ const v=document.getElementById("newTask").value.trim(); if(!v)return; if(!list.includes(v))list.push(v); save(); taskPaneRender(k); };
