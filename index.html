@@ -513,7 +513,11 @@
   .seg{display:flex;gap:0;border:1px solid var(--rule-strong);border-radius:10px;overflow:hidden;margin:6px 4px 14px}
   .seg button{flex:1;padding:10px;font-size:13px;font-weight:600;color:var(--ink-soft)}
   .seg button.on{background:var(--ink);color:#fff}
-  textarea.bulk{min-height:120px;resize:vertical;line-height:1.7;font-family:var(--font-mono);font-size:13px}
+  /* 貼り付け欄は幅いっぱいに（1行1件を折り返さずに確認できないと、貼り間違いに気づけない） */
+  textarea.bulk{display:block;width:calc(100% - 8px);box-sizing:border-box;margin:0 4px;
+    padding:11px 12px;border:1px solid var(--rule-strong);border-radius:10px;background:var(--paper);outline:none;
+    min-height:120px;resize:vertical;line-height:1.7;font-family:var(--font-mono);font-size:13px}
+  textarea.bulk:focus{border-color:var(--figure)}
   .hint{font-size:12px;color:var(--figure);margin:6px 4px}
   .tasklist-item{display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--rule)}
   .tasklist-item .nm{flex:1}
@@ -3416,10 +3420,28 @@ function filingsPaneRender(){
   pane.innerHTML=`
     <div class="hint">申告業務管理プロジェクトで作った「今月のチェックリスト」の<b>取り込みブロック</b>をここに貼ります。関与先コードで各顧問先に配られ、計測を始めるとその顧問先のブリーフに出ます。同じ月をもう一度貼ると置き換わります（チェック済みは引き継ぎ）。</div>
     <textarea class="bulk" id="flTxt" placeholder="#申告取込 ${ym}&#10;411 | 源泉納付 | 8/11&#10;429 | 消費税申告 | 8/31&#10;429 | 簡易課税選択届 | 8/31 ★"></textarea>
-    <div class="actions"><button class="btn-fill" id="flGo">取り込む</button></div>
+    <div class="actions"><button class="btn-fill" id="flGo">取り込む</button>
+      ${groups.length?`<button class="btn-ghost" id="flOut">今の内容を取込ブロックで書き出す</button>`:""}</div>
+    <div class="hint" style="margin:2px 4px 10px">月の途中で1件だけ足したいときは、<b>先に書き出してから</b>行を足して貼り直します（貼ると同じ月は総入れ替えになるため）。</div>
     <div id="flResult"></div>
     <div class="fl-listhead">${yy}年${Number(mm)}月の申告 <span class="fl-n">${openTotal?`残${openTotal}`:"完了"}</span></div>
     <div id="flList">${listHTML}</div>`;
+
+  /* 今入っている今月ぶんを、そのまま貼り直せる取込ブロックに戻す。
+     取込は同じ月を総入れ替えするので、1件足すには「現状＋1行」を作るしかない。
+     手で書き写すと他が消える事故になるため、機械で出す。 */
+  const outBtn=document.getElementById("flOut");
+  if(outBtn) outBtn.onclick=()=>{
+    const L=[`#申告取込 ${ym}`];
+    for(const g of groups)
+      for(const f of g.list) L.push(`${g.c.code} | ${f.task}${f.due?` | ${f.due}`:""}${f.star?" ★":""}`);
+    const ta=document.getElementById("flTxt");
+    ta.value=L.join("\n");                   // 貼り付け欄にも入れる（コピー不可の環境でも編集できる）
+    copyText(L.join("\n"),null);
+    document.getElementById("flResult").innerHTML=
+      `<div class="fl-msg ok">${yy}年${Number(mm)}月ぶん ${L.length-1}件を書き出しました。行を足して「取り込む」を押してください。<br>
+        <b>チェック済みは業務名が一致していれば引き継がれます</b>（名前を変えると外れます）。</div>`;
+  };
 
   document.getElementById("flGo").onclick=()=>{
     const txt=document.getElementById("flTxt").value;
