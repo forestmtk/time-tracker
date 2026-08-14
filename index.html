@@ -561,6 +561,7 @@
   .hint{font-size:12px;color:var(--figure);margin:6px 4px}
   .tasklist-item{display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--rule)}
   .tasklist-item .nm{flex:1}
+  .tk-stage{font-size:10.5px;font-weight:700;color:#2E7D6B;border:1px solid #2E7D6B;border-radius:5px;padding:1px 6px;white-space:nowrap}
   .tasklist-item .ord{display:flex;flex-direction:column;gap:2px;flex:0 0 auto}
   .tasklist-item .mv{width:26px;height:18px;display:flex;align-items:center;justify-content:center;
     border:1px solid var(--rule-strong);border-radius:5px;background:var(--paper-2);
@@ -851,7 +852,7 @@
 
 /* 公開版が古いままかを、その場で判別するための版数。
    index.html を差し替えるたびに必ず更新すること（日付＋a,b,c…） */
-const APP_VER = "2026-08-14b";
+const APP_VER = "2026-08-14e";
 const STORE_KEY = "timeTracker.v1";
 const VIEW_START_H = 6;    // タイムライン表示開始
 const VIEW_END_H   = 22;   // 表示終了
@@ -868,7 +869,8 @@ const COLOR_UNASSIGNED = "#8A93A0"; // 顧問先なし
 
 /* 業務内容の初期候補 */
 const DEFAULT_TASKS = {
-  client:   ["申告書作成","記帳・仕訳チェック","給与計算","決算・決算見込","消費税","相談・打合せ","資料作成","メール・電話","移動"],
+  client:   ["記帳・仕訳チェック","決算・決算見込","申告書作成","電子申告・納付",
+             "消費税中間","給与計算","相談・打合せ","資料作成","メール・電話","移動"],
   internal: ["試験勉強(相続税)","システム開発","事務所内業務","その他"]
 };
 /* 「移動」業務の判定（"移動" または "移動（往路）" 等の派生も拾う） */
@@ -2152,11 +2154,11 @@ document.getElementById("memoBtn").onclick=()=>{ setView(appView==="memo"?"log":
      延長の特例〈法法75の2〉ありなら1月加算）。土日は翌月曜に送るが祝日は見ていない
 ============================================================ */
 const CLOSE_STAGES=[
-  {k:"a", label:"資料受領",     tasks:[]},                          // 手動（#預りがあれば着手扱い）
+  {k:"a", label:"資料受領",     tasks:[]},                          // 業務は作らない。#預り があれば着手扱い
   {k:"b", label:"記帳・整理",   tasks:["記帳・仕訳チェック"]},
   {k:"c", label:"決算見込・報告",tasks:["決算・決算見込"]},
-  {k:"d", label:"申告書作成",   tasks:["申告書作成","消費税"]},
-  {k:"e", label:"申告・納付",   tasks:[]}                           // 手動
+  {k:"d", label:"申告書作成",   tasks:["申告書作成"]},          // 「消費税」は中間申告で誤検知するので入れない
+  {k:"e", label:"申告・納付",   tasks:["電子申告・納付"]}
 ];
 function monthEnd(y,mo){ return new Date(y,mo+1,0); }               // mo は 0起点
 function shiftWeekend(d){                                            // 土日なら翌月曜（祝日は未対応）
@@ -2171,7 +2173,7 @@ function currentClosing(c, base){
   for(const yy of [y-1,y,y+1]){
     const end=monthEnd(yy,c.fy-1);                                   // 決算月の末日
     const due=shiftWeekend(monthEnd(yy,c.fy-1+(c.ext?3:2)));         // 申告期限
-    const from=new Date(yy,c.fy-2,1);                                // 期末月の前月1日から見る
+    const from=new Date(yy,c.fy,1);                                  // 期末月の翌月から出す（作業は期末後に始まる）
     const until=new Date(due); until.setDate(until.getDate()+15);
     if(t>=from && t<=until) return {end, due, key:c.id+"|"+end.getFullYear()+"-"+String(end.getMonth()+1).padStart(2,"0")};
   }
@@ -2179,7 +2181,7 @@ function currentClosing(c, base){
 }
 /* 期末月の前月〜申告期限の記録から、業務名で着手した工程を拾う */
 function closingAuto(c, cl){
-  const from=new Date(cl.end.getFullYear(), cl.end.getMonth()-1, 1).getTime();
+  const from=new Date(cl.end.getFullYear(), cl.end.getMonth()-2, 1).getTime();   // 決算対策の打合せも拾う
   const to=cl.due.getTime()+86400000;
   const hit={};
   for(const e of state.entries){
@@ -2207,8 +2209,32 @@ function closingRows(base){
   }
   return rows.sort((a,b)=>a.cl.due-b.cl.due);
 }
+function closingRowHTML(r, today){
+  const left=Math.round((startOfDay(r.cl.due).getTime()-today)/86400000);
+  let h=`<tr><td class="l"><span class="cl-cli" data-cid="${r.c.id}">
+      <span class="dot" style="background:${r.c.color}"></span>
+      <span class="nm">${esc((r.c.code?r.c.code+" ":"")+r.c.name)}</span>
+      <span class="cl-fy">${r.c.fy}月期${r.c.ext?"・延長":""}</span></span></td>`;
+  for(const st of CLOSE_STAGES){
+    const v=closingVal(r.cl.key,st.k);
+    const auto=v===0 && r.auto[st.k];
+    const cls=v===2?"on":(v===1?"doing":(auto?"doing auto":""));
+    const txt=v===2?"完了":(v===1?"着手":(auto?"着手":"—"));
+    h+=`<td><button class="cl-cell ${cls}" data-key="${r.cl.key}" data-st="${st.k}">${txt}</button></td>`;
+  }
+  return h+`<td class="cl-due">${r.cl.due.getMonth()+1}/${r.cl.due.getDate()}</td>
+      <td class="cl-left${left<=14?" hot":""}">${left<0?`${-left}日超過`:`${left}日`}</td></tr>`;
+}
+function closingHeadHTML(){
+  let h=`<tr><th class="l">顧問先</th>`;
+  for(const st of CLOSE_STAGES) h+=`<th>${st.label}</th>`;
+  return h+`<th>申告期限</th><th>残り</th></tr>`;
+}
 function drawClosingBoardHTML(){
-  const rows=closingRows();
+  const all=closingRows();
+  // 「申告・納付」を完了にしたら、その決算は終わり＝ボードから畳む（超過表示が居座らない）
+  const rows=all.filter(r=>closingVal(r.cl.key,"e")!==2);
+  const fin=all.filter(r=>closingVal(r.cl.key,"e")===2);
   const anyFy=state.clients.some(c=>c.kind==="client"&&c.fy);
   if(!anyFy) return `<div class="cl-card"><div class="cl-h"><span class="t">決算の進捗</span></div>
       <div class="hint" style="margin:2px">顧問先の決算月がまだ入っていません。下のリストで入れると、ここに進捗が出ます
@@ -2216,28 +2242,23 @@ function drawClosingBoardHTML(){
   if(!rows.length) return `<div class="cl-card"><div class="cl-h"><span class="t">決算の進捗</span></div>
       <div class="hint" style="margin:2px">いま走っている決算はありません（期末月の前月から申告期限まで出ます）。</div>`+closingSetupHTML()+`</div>`;
   const today=startOfDay(new Date()).getTime();
+  const over=rows.filter(r=>startOfDay(r.cl.due).getTime()<today).length;
   let h=`<div class="cl-card"><div class="cl-h"><span class="t">決算の進捗</span>
-      <span class="s">${rows.length}社 ・ 破線＝記録から自動で着手・押すと 未→着手→完了</span></div>
-    <table class="cl-tbl"><thead><tr><th class="l">顧問先</th>`;
-  for(const st of CLOSE_STAGES) h+=`<th>${st.label}</th>`;
-  h+=`<th>申告期限</th><th>残り</th></tr></thead><tbody>`;
-  for(const r of rows){
-    const left=Math.round((startOfDay(r.cl.due).getTime()-today)/86400000);
-    h+=`<tr><td class="l"><span class="cl-cli" data-cid="${r.c.id}">
-        <span class="dot" style="background:${r.c.color}"></span>
-        <span class="nm">${esc((r.c.code?r.c.code+" ":"")+r.c.name)}</span>
-        <span class="cl-fy">${r.c.fy}月期${r.c.ext?"・延長":""}</span></span></td>`;
-    for(const st of CLOSE_STAGES){
-      const v=closingVal(r.cl.key,st.k);
-      const auto=v===0 && r.auto[st.k];
-      const cls=v===2?"on":(v===1?"doing":(auto?"doing auto":""));
-      const txt=v===2?"完了":(v===1?"着手":(auto?"着手":"—"));
-      h+=`<td><button class="cl-cell ${cls}" data-key="${r.cl.key}" data-st="${st.k}">${txt}</button></td>`;
-    }
-    h+=`<td class="cl-due">${r.cl.due.getMonth()+1}/${r.cl.due.getDate()}</td>
-        <td class="cl-left${left<=14?" hot":""}">${left<0?`${-left}日超過`:`${left}日`}</td></tr>`;
+      <span class="s">${rows.length}社${over?` ・ <b style="color:var(--shu)">期限超過 ${over}社</b>`:""} ・ 破線＝記録から自動で着手・押すと 未→着手→完了。<b>申告・納付</b>を完了にすると畳まれます</span></div>`;
+  if(rows.length){
+    h+=`<table class="cl-tbl"><thead>${closingHeadHTML()}</thead><tbody>`;
+    for(const r of rows) h+=closingRowHTML(r,today);
+    h+=`</tbody></table>`;
+  }else{
+    h+=`<div class="hint" style="margin:2px">走っている決算はすべて申告・納付まで終わっています。</div>`;
   }
-  return h+`</tbody></table>`+closingSetupHTML()+`</div>`;
+  if(fin.length){
+    h+=`<details class="cl-setup"><summary>申告まで完了：${fin.length}社（押し間違えたらここから戻せます）</summary>
+      <table class="cl-tbl" style="margin-top:6px"><tbody>`;
+    for(const r of fin) h+=closingRowHTML(r,today);
+    h+=`</tbody></table></details>`;
+  }
+  return h+closingSetupHTML()+`</div>`;
 }
 /* 決算月がまだ入っていない顧問先を、この場で埋められるようにする
    （設定を1社ずつ開くのも、一括登録の文字列を組むのも続かない） */
@@ -3702,7 +3723,12 @@ function importData(file){
 function taskPaneRender(k){
   const pane=document.getElementById("taskPane");
   const list=state.tasks[k];
-  pane.innerHTML=`<div id="taskItems"></div>
+  pane.innerHTML=`${k==="client"?`<div class="hint" style="margin:2px 2px 8px">
+      決算の進捗は<b>業務名</b>から自動で「着手」を拾います。対応するものには右に印が出ます。<br>
+      いま拾えるのは <b>記帳・仕訳チェック／決算・決算見込／申告書作成／電子申告・納付</b> の4つです
+      （①資料受領はメモの <b>#預り</b> で拾うので、業務は作りません）。
+      消費税の中間申告は決算と別なので、<b>消費税中間</b> のように決算と混ざらない名前にしてください。</div>`:""}
+    <div id="taskItems"></div>
     <div class="add-inline"><input id="newTask" placeholder="業務を追加" autocomplete="off"><button id="newTaskGo">追加</button></div>`;
   const items=document.getElementById("taskItems");
   list.forEach((t,i)=>{
@@ -3711,7 +3737,8 @@ function taskPaneRender(k){
         <button class="mv up" aria-label="上へ"${i===0?" disabled":""}>▲</button>
         <button class="mv dn" aria-label="下へ"${i===list.length-1?" disabled":""}>▼</button>
       </span>
-      <span class="nm">${esc(t)}</span><button class="x" aria-label="削除">×</button>`;
+      <span class="nm">${esc(t)}</span>${(()=>{ const st=CLOSE_STAGES.find(x=>x.tasks.includes(t));
+        return st?`<span class="tk-stage">決算 → ${st.label}</span>`:""; })()}<button class="x" aria-label="削除">×</button>`;
     row.querySelector(".up").onclick=()=>{ if(i>0){ [list[i-1],list[i]]=[list[i],list[i-1]]; save(); taskPaneRender(k); } };
     row.querySelector(".dn").onclick=()=>{ if(i<list.length-1){ [list[i+1],list[i]]=[list[i],list[i+1]]; save(); taskPaneRender(k); } };
     row.querySelector(".x").onclick=()=>{ list.splice(i,1); save(); taskPaneRender(k); };
