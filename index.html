@@ -394,6 +394,15 @@
   .cl-cell.auto{border-style:dashed;color:var(--ink-soft)}
   .cl-cell.on{background:#2E7D6B;border-color:#2E7D6B;color:#fff}
   .cl-cell.doing{background:var(--shu-soft);border-color:var(--shu);color:var(--shu)}
+  .cl-setup{margin-top:10px;border-top:1px solid var(--rule);padding-top:8px}
+  .cl-setup summary{font-size:11.5px;color:var(--figure);cursor:pointer}
+  .cl-setup-list{margin-top:6px}
+  .cl-setup-row{display:flex;align-items:center;gap:8px;padding:4px 2px;border-bottom:1px solid var(--rule)}
+  .cl-setup-row .dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+  .cl-setup-row .code{font-size:11px;color:var(--figure);min-width:34px}
+  .cl-setup-row .nm{flex:1;font-size:12.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cl-fy-sel{padding:4px 8px;border:1px solid var(--rule-strong);border-radius:7px;background:var(--paper);font-size:12px}
+  .cl-ext{font-size:11px;color:var(--figure);display:flex;align-items:center;gap:4px;white-space:nowrap}
   .cl-due{font-family:var(--font-mono);font-size:11.5px;font-weight:700;text-align:right;white-space:nowrap}
   .cl-left{font-family:var(--font-mono);font-size:11px;text-align:right;white-space:nowrap;color:var(--figure)}
   .cl-left.hot{color:var(--shu);font-weight:700}
@@ -842,7 +851,7 @@
 
 /* 公開版が古いままかを、その場で判別するための版数。
    index.html を差し替えるたびに必ず更新すること（日付＋a,b,c…） */
-const APP_VER = "2026-08-13c";
+const APP_VER = "2026-08-14b";
 const STORE_KEY = "timeTracker.v1";
 const VIEW_START_H = 6;    // タイムライン表示開始
 const VIEW_END_H   = 22;   // 表示終了
@@ -2202,10 +2211,10 @@ function drawClosingBoardHTML(){
   const rows=closingRows();
   const anyFy=state.clients.some(c=>c.kind==="client"&&c.fy);
   if(!anyFy) return `<div class="cl-card"><div class="cl-h"><span class="t">決算の進捗</span></div>
-      <div class="hint" style="margin:2px">顧問先に決算月がまだ入っていません。設定→一括登録で
-      <b>543 ナックワン 6</b>（申告期限を延長している会社は末尾に <b>延長</b>）の形で入れると、ここに進捗が出ます。</div></div>`;
+      <div class="hint" style="margin:2px">顧問先の決算月がまだ入っていません。下のリストで入れると、ここに進捗が出ます
+      （設定→顧問先の編集、設定→一括登録の末尾に月を足す形でも入ります）。</div>`+closingSetupHTML()+`</div>`;
   if(!rows.length) return `<div class="cl-card"><div class="cl-h"><span class="t">決算の進捗</span></div>
-      <div class="hint" style="margin:2px">いま走っている決算はありません（期末月の前月から申告期限まで出ます）。</div></div>`;
+      <div class="hint" style="margin:2px">いま走っている決算はありません（期末月の前月から申告期限まで出ます）。</div>`+closingSetupHTML()+`</div>`;
   const today=startOfDay(new Date()).getTime();
   let h=`<div class="cl-card"><div class="cl-h"><span class="t">決算の進捗</span>
       <span class="s">${rows.length}社 ・ 破線＝記録から自動で着手・押すと 未→着手→完了</span></div>
@@ -2228,7 +2237,24 @@ function drawClosingBoardHTML(){
     h+=`<td class="cl-due">${r.cl.due.getMonth()+1}/${r.cl.due.getDate()}</td>
         <td class="cl-left${left<=14?" hot":""}">${left<0?`${-left}日超過`:`${left}日`}</td></tr>`;
   }
-  return h+`</tbody></table></div>`;
+  return h+`</tbody></table>`+closingSetupHTML()+`</div>`;
+}
+/* 決算月がまだ入っていない顧問先を、この場で埋められるようにする
+   （設定を1社ずつ開くのも、一括登録の文字列を組むのも続かない） */
+function closingSetupHTML(){
+  const miss=state.clients.filter(c=>c.kind==="client" && !c.fy);
+  if(!miss.length) return "";
+  const opt=v=>`<option value="">—</option>`+[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}">${m}月</option>`).join("");
+  let h=`<details class="cl-setup" open><summary>決算月が未設定：${miss.length}社（ここで入れられます）</summary><div class="cl-setup-list">`;
+  for(const c of miss){
+    h+=`<div class="cl-setup-row">
+      <span class="dot" style="background:${c.color}"></span>
+      <span class="code mono">${esc(c.code)}</span><span class="nm">${esc(c.name)}</span>
+      <select class="cl-fy-sel" data-cid="${c.id}">${opt()}</select>
+      <label class="cl-ext"><input type="checkbox" class="cl-ext-cb" data-cid="${c.id}"> 延長</label>
+    </div>`;
+  }
+  return h+`</div></details>`;
 }
 
 function monthCellData(year,month){
@@ -2323,6 +2349,13 @@ function renderAnalysis(){
   anaInner.querySelectorAll(".sum-row.clickable").forEach(el=>el.onclick=()=>openClientHistory(el.dataset.cid));
   anaInner.querySelectorAll(".cl-cell").forEach(b=>b.onclick=()=>{ closingBump(b.dataset.key,b.dataset.st); renderAnalysis(); });
   anaInner.querySelectorAll(".cl-cli").forEach(el=>el.onclick=()=>openClientHistory(el.dataset.cid,"memo"));
+  anaInner.querySelectorAll(".cl-fy-sel").forEach(sel=>sel.onchange=()=>{
+    const c=getClient(sel.dataset.cid); const v=parseInt(sel.value,10);
+    const cb=anaInner.querySelector(`.cl-ext-cb[data-cid="${sel.dataset.cid}"]`);
+    if(v){ c.fy=v; c.ext=!!(cb&&cb.checked); } else { delete c.fy; delete c.ext; }
+    save(); renderAnalysis(); renderAll();
+    if(v) toast(`${c.code||c.name} を ${v}月期にしました`);
+  });
   anaInner.querySelectorAll(".ov-cell[data-k]").forEach(b=>b.onclick=()=>{
     if(b.dataset.prev){ const dt=dayFromKey(b.dataset.k); anaMonth=new Date(dt.getFullYear(),dt.getMonth(),1); anaSelDay=b.dataset.k; renderAnalysis(); }
     else selectAnaDay(b.dataset.k);
@@ -3482,27 +3515,37 @@ function paneRender(t){
     if(clients.length===0){ const h=document.createElement("div"); h.className="hint"; h.textContent="顧問先がまだありません。"; rows.appendChild(h); }
   }
   else if(t==="bulk"){
-    pane.innerHTML=`<div class="hint">1行につき「コード␣社名」。末尾に<b>決算月</b>（1〜12）を足すと決算の進捗に出ます。申告期限を延長している会社はさらに末尾へ<b>延長</b>。<br>例：<b>543 ナックワン 6</b> ／ <b>980 啓明通信工業 12 延長</b>。既存コードは上書き、新規は色を自動割り当てします。</div>
+    pane.innerHTML=`<div class="hint">1行につき「コード␣社名」。末尾に<b>決算月</b>（1〜12）を足すと決算の進捗に出ます。延長している会社はさらに末尾へ<b>延長</b>。<br>
+        <b>「543 6」のように社名を書かず月だけ</b>にすると、<b>決算月だけを更新</b>します（社名は触りません。この端末に無いコードは飛ばして報告）。<br>
+        例：<b>543 ナックワン 6</b> ／ <b>543 6</b> ／ <b>283 3 延長</b>。既存コードは上書き、新規は色を自動割り当てします。</div>
       <textarea class="bulk" id="bulkTxt" placeholder="407 Cyres 5&#10;543 ナックワン 6&#10;980 啓明通信工業 12 延長"></textarea>
       <div class="actions"><button class="btn-fill" id="bulkGo">まとめて登録</button></div>`;
     document.getElementById("bulkGo").onclick=()=>{
       const lines=document.getElementById("bulkTxt").value.split("\n").map(s=>s.trim()).filter(Boolean);
-      let added=0,updated=0;
+      let added=0,updated=0; const skipped=[];
       for(const ln of lines){
         const m=ln.match(/^(\S+)\s+(.+)$/); if(!m)continue;
         const code=m[1];
         // 社名にも空白が入りうるので、決算月・延長は「末尾から」外していく
         const parts=m[2].trim().split(/\s+/);
         let fy=null, ext=false;
-        if(parts.length>1 && /^延長$/.test(parts[parts.length-1])){ ext=true; parts.pop(); }
-        if(parts.length>1 && /^([1-9]|1[0-2])月?$/.test(parts[parts.length-1])){ fy=parseInt(parts.pop(),10); }
-        const name=parts.join(" ").trim(); if(!name) continue;
+        if(/^延長$/.test(parts[parts.length-1])){ ext=true; parts.pop(); }
+        if(parts.length && /^([1-9]|1[0-2])月?$/.test(parts[parts.length-1])){ fy=parseInt(parts.pop(),10); }
+        const name=parts.join(" ").trim();
+        if(!name){                                   // 「543 6」「543 6 延長」＝決算月だけの更新（社名は触らない）
+          if(!fy) continue;
+          const t=state.clients.find(c=>c.kind==="client"&&c.code===code);
+          if(!t){ skipped.push(code); continue; }
+          t.fy=fy; t.ext=ext; updated++; continue;
+        }
         const ex=state.clients.find(c=>c.kind==="client"&&c.code===code);
         if(ex){ ex.name=name; if(fy){ ex.fy=fy; ex.ext=ext; } updated++; }
         else{ const c={id:uid(),kind:"client",code,name,color:nextColor()};
               if(fy){ c.fy=fy; c.ext=ext; } state.clients.push(c); added++; }
       }
-      save(); toast(`追加${added}件・更新${updated}件`); paneRender("clients");
+      save(); toast(`追加${added}件・更新${updated}件${skipped.length?`・未登録${skipped.length}件`:""}`);
+      if(skipped.length) alert("この端末に無いコードは飛ばしました：\n"+skipped.join("、"));
+      paneRender("clients");
       document.querySelector('#segTop button[data-t="clients"]').click();
     };
   }
@@ -3692,6 +3735,13 @@ function editClient(id){
       <div class="field" style="flex:0 0 34%"><label>コード</label><input id="cCode" class="mono" value="${esc(c.code)}" placeholder="407"></div>
       <div class="field"><label>社名</label><input id="cName" value="${esc(c.name)}" placeholder="株式会社◯◯"></div>
     </div>
+    <div class="row2">
+      <div class="field" style="flex:0 0 44%"><label>決算月</label>
+        <select id="cFy">${[""].concat([1,2,3,4,5,6,7,8,9,10,11,12]).map(v=>
+          `<option value="${v}"${String(c.fy||"")===String(v)?" selected":""}>${v?v+"月":"（未設定）"}</option>`).join("")}</select></div>
+      <div class="field"><label>申告期限の延長</label>
+        <select id="cExt"><option value="">なし（2月以内）</option><option value="1"${c.ext?" selected":""}>あり（1月延長）</option></select></div>
+    </div>
     <div class="field"><label>色</label><div class="color-grid" id="cColors"></div></div>
     <div class="actions">
       <button class="btn-fill" id="cSave">保存</button>
@@ -3705,6 +3755,8 @@ function editClient(id){
     c.code=document.getElementById("cCode").value.trim();
     c.name=document.getElementById("cName").value.trim()||"(無名)";
     c.color=chosen;
+    const fy=parseInt(document.getElementById("cFy").value,10);
+    if(fy){ c.fy=fy; c.ext=!!document.getElementById("cExt").value; } else { delete c.fy; delete c.ext; }
     if(isNew) state.clients.push(c);
     save(); renderSettings(); renderAll(); toast(isNew?"追加しました":"保存しました");
   };
