@@ -852,7 +852,7 @@
 
 /* 公開版が古いままかを、その場で判別するための版数。
    index.html を差し替えるたびに必ず更新すること（日付＋a,b,c…） */
-const APP_VER = "2026-08-14e";
+const APP_VER = "2026-08-14f";
 const STORE_KEY = "timeTracker.v1";
 const VIEW_START_H = 6;    // タイムライン表示開始
 const VIEW_END_H   = 22;   // 表示終了
@@ -3599,9 +3599,16 @@ function paneRender(t){
       <div style="margin:10px 4px;font-size:13px;color:var(--ink-soft)">現在：顧問先 <b>${nCli}</b> 件 ／ 記録 <b>${nEnt}</b> 件</div>
       <button class="btn-fill" id="expBtn" style="width:100%;margin:4px 0 10px">バックアップを書き出す（JSON）</button>
       <label class="btn-ghost" style="display:block;width:100%;text-align:center;box-sizing:border-box">バックアップを読み込む
-        <input type="file" id="impFile" accept="application/json,.json" style="display:none"></label>`;
+        <input type="file" id="impFile" accept="application/json,.json" style="display:none"></label>
+      <div class="hint" style="margin-top:18px">記録は端末ごとに別物ですが、<b>設定（顧問先・決算月・業務）だけ</b>なら、
+        記録を壊さずにもう一方の端末へ配れます。読み込み側では<b>関与先コードで突き合わせ</b>、記録・メモ・申告・決算の進捗には触りません。</div>
+      <button class="btn-ghost" id="expSetup" style="width:100%;margin:4px 0 10px">設定だけ書き出す（顧問先・決算月・業務）</button>
+      <label class="btn-ghost" style="display:block;width:100%;text-align:center;box-sizing:border-box">設定だけ読み込む
+        <input type="file" id="impSetupFile" accept="application/json,.json" style="display:none"></label>`;
     document.getElementById("expBtn").onclick=exportData;
     document.getElementById("impFile").onchange=(ev)=>{ const f=ev.target.files&&ev.target.files[0]; if(f) importData(f); };
+    document.getElementById("expSetup").onclick=exportSetup;
+    document.getElementById("impSetupFile").onchange=(ev)=>{ const f=ev.target.files&&ev.target.files[0]; if(f) importSetup(f); };
   }
 }
 /* 保存状況を数える（7日窓に関係なく、未保存の過去日を全部見る） */
@@ -3691,6 +3698,50 @@ function saveStatus(){
   const all=[...set].sort();
   const resave=state.resaveDays?Object.keys(state.resaveDays).filter(k=>dayFromKey(k).getTime()<today).length:0;
   return {all,resave};
+}
+/* 設定だけの持ち出し。記録は端末ごとに別物なので、丸ごとのバックアップは
+   もう一方の端末では使えない（上書きで記録が消える）。顧問先・決算月・業務だけを配る */
+function exportSetup(){
+  const payload={
+    type:"time-tracker-setup", ver:APP_VER, at:dateKey(new Date()),
+    clients:state.clients.filter(c=>c.kind==="client")
+      .map(c=>({code:c.code,name:c.name,color:c.color,fy:c.fy||null,ext:!!c.ext})),
+    tasks:{client:[...state.tasks.client], internal:[...state.tasks.internal]}
+  };
+  try{
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download="time_tracker_setup_"+dateKey(new Date())+".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    toast(`設定を書き出しました（顧問先${payload.clients.length}件）`);
+  }catch(e){ toast("書き出しに失敗しました"); }
+}
+function importSetup(file){
+  const r=new FileReader();
+  r.onload=()=>{
+    let s; try{ s=JSON.parse(r.result); }catch(e){ toast("JSONを読めませんでした"); return; }
+    if(!s || s.type!=="time-tracker-setup" || !Array.isArray(s.clients)){ toast("設定ファイルではないようです"); return; }
+    let add=0, upd=0;
+    for(const c of s.clients){
+      if(!c.code) continue;
+      const ex=state.clients.find(x=>x.kind==="client"&&x.code===String(c.code));
+      if(ex){ ex.name=c.name||ex.name; if(c.color) ex.color=c.color;
+              if(c.fy){ ex.fy=c.fy; ex.ext=!!c.ext; } upd++; }
+      else{ state.clients.push({id:uid(),kind:"client",code:String(c.code),name:c.name||"(無名)",
+              color:c.color||nextColor(), ...(c.fy?{fy:c.fy,ext:!!c.ext}:{})}); add++; }
+    }
+    if(s.tasks){                                   // 業務は足す方向だけ（この端末で使っている名前は消さない）
+      for(const k of ["client","internal"]){
+        if(!Array.isArray(s.tasks[k])) continue;
+        for(const t of s.tasks[k]) if(!state.tasks[k].includes(t)) state.tasks[k].push(t);
+      }
+    }
+    save(); renderSettings(); renderAll();
+    toast(`設定を読み込みました（追加${add}件・更新${upd}件）`);
+  };
+  r.readAsText(file);
 }
 function exportData(){
   try{
