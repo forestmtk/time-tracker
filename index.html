@@ -852,7 +852,7 @@
 
 /* 公開版が古いままかを、その場で判別するための版数。
    index.html を差し替えるたびに必ず更新すること（日付＋a,b,c…） */
-const APP_VER = "2026-08-14f";
+const APP_VER = "2026-08-14g";
 const STORE_KEY = "timeTracker.v1";
 const VIEW_START_H = 6;    // タイムライン表示開始
 const VIEW_END_H   = 22;   // 表示終了
@@ -2158,7 +2158,7 @@ const CLOSE_STAGES=[
   {k:"b", label:"記帳・整理",   tasks:["記帳・仕訳チェック"]},
   {k:"c", label:"決算見込・報告",tasks:["決算・決算見込"]},
   {k:"d", label:"申告書作成",   tasks:["申告書作成"]},          // 「消費税」は中間申告で誤検知するので入れない
-  {k:"e", label:"申告・納付",   tasks:["電子申告・納付"]}
+  {k:"e", label:"申告・納付",   tasks:["電子申告・納付"]}   // 自分でやらない場合は申告チェックの「決算申告」と連動
 ];
 function monthEnd(y,mo){ return new Date(y,mo+1,0); }               // mo は 0起点
 function shiftWeekend(d){                                            // 土日なら翌月曜（祝日は未対応）
@@ -2239,12 +2239,12 @@ function drawClosingBoardHTML(){
   if(!anyFy) return `<div class="cl-card"><div class="cl-h"><span class="t">決算の進捗</span></div>
       <div class="hint" style="margin:2px">顧問先の決算月がまだ入っていません。下のリストで入れると、ここに進捗が出ます
       （設定→顧問先の編集、設定→一括登録の末尾に月を足す形でも入ります）。</div>`+closingSetupHTML()+`</div>`;
-  if(!rows.length) return `<div class="cl-card"><div class="cl-h"><span class="t">決算の進捗</span></div>
-      <div class="hint" style="margin:2px">いま走っている決算はありません（期末月の前月から申告期限まで出ます）。</div>`+closingSetupHTML()+`</div>`;
+  if(!all.length) return `<div class="cl-card"><div class="cl-h"><span class="t">決算の進捗</span></div>
+      <div class="hint" style="margin:2px">いま走っている決算はありません（期末月の翌月から申告期限まで出ます）。</div>`+closingSetupHTML()+`</div>`;
   const today=startOfDay(new Date()).getTime();
   const over=rows.filter(r=>startOfDay(r.cl.due).getTime()<today).length;
   let h=`<div class="cl-card"><div class="cl-h"><span class="t">決算の進捗</span>
-      <span class="s">${rows.length}社${over?` ・ <b style="color:var(--shu)">期限超過 ${over}社</b>`:""} ・ 破線＝記録から自動で着手・押すと 未→着手→完了。<b>申告・納付</b>を完了にすると畳まれます</span></div>`;
+      <span class="s">${rows.length}社${over?` ・ <b style="color:var(--shu)">期限超過 ${over}社</b>`:""} ・ 破線＝記録から自動で着手・押すと 未→着手→完了。<b>申告・納付</b>を完了にすると畳まれます（申告チェックの「決算申告」にチェックを入れても完了になります）</span></div>`;
   if(rows.length){
     h+=`<table class="cl-tbl"><thead>${closingHeadHTML()}</thead><tbody>`;
     for(const r of rows) h+=closingRowHTML(r,today);
@@ -2848,7 +2848,30 @@ function drawDueSheet(){
 function toggleFiling(clientId, fid){
   const list=state.filings&&state.filings[clientId]; if(!list) return false;
   const f=list.find(x=>x.id===fid); if(!f) return false;
-  f.done=!f.done; save(); return true;
+  f.done=!f.done;
+  syncClosingFromFiling(clientId, f);   // 「決算申告」のチェック＝申告・納付の完了
+  save(); return true;
+}
+/* 申告・納付は自分でやるとは限らない（所長・事務・ダイレクト納付）。
+   自分の工数記録に出ないので、申告チェックリスト側のチェックを完了の根拠にする。
+   対応付けは「その決算の申告期限の年月」＝取り込んだ申告の ym */
+function closingByDueYM(c, ym){
+  if(!c || !c.fy || !ym) return null;
+  const [yy,mm]=ym.split("-").map(Number);
+  for(const y of [yy-1,yy,yy+1]){
+    const end=monthEnd(y,c.fy-1);
+    const due=shiftWeekend(monthEnd(y,c.fy-1+(c.ext?3:2)));
+    if(due.getFullYear()===yy && due.getMonth()+1===mm)
+      return {end,due,key:c.id+"|"+end.getFullYear()+"-"+String(end.getMonth()+1).padStart(2,"0")};
+  }
+  return null;
+}
+function syncClosingFromFiling(clientId, f){
+  if(!f || !/決算/.test(f.task||"")) return;          // 決算申告の行だけ。消費税中間などは無関係
+  const cl=closingByDueYM(getClient(clientId), f.ym);
+  if(!cl) return;
+  const st=closingState(); if(!st[cl.key]) st[cl.key]={};
+  st[cl.key].e = f.done?2:0;
 }
 
 /* 顧問先ID → 未完のやること[] */
