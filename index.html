@@ -216,6 +216,8 @@
   .me-time{font-family:var(--font-mono);font-size:11px;color:var(--figure);margin-left:auto;flex:0 0 auto}
   .me-badge{font-size:10.5px;font-weight:700;color:var(--shu);border:1px solid var(--shu);border-radius:5px;padding:0 5px}
   .me-body{font-size:13.5px;line-height:1.7;color:var(--ink);white-space:pre-wrap;word-break:break-word}
+  .me-link{color:#2B5FA8;text-decoration:underline;text-underline-offset:2px;word-break:break-all}
+  .me-link:hover{color:var(--shu)}
   .me-body mark{background:rgba(220,74,46,.20);color:inherit;border-radius:2px;padding:0 1px}
   .me-cli mark,.me-task mark{background:rgba(220,74,46,.20);color:inherit}
 
@@ -852,7 +854,7 @@
 
 /* 公開版が古いままかを、その場で判別するための版数。
    index.html を差し替えるたびに必ず更新すること（日付＋a,b,c…） */
-const APP_VER = "2026-08-14g";
+const APP_VER = "2026-08-14h";
 const STORE_KEY = "timeTracker.v1";
 const VIEW_START_H = 6;    // タイムライン表示開始
 const VIEW_END_H   = 22;   // 表示終了
@@ -912,7 +914,20 @@ function load(){
     return s;
   }catch(e){ return defaultState(); }
 }
-function save(){ try{ localStorage.setItem(STORE_KEY,JSON.stringify(state)); }catch(e){} }
+let saveFailed=false;
+function save(){
+  try{
+    localStorage.setItem(STORE_KEY,JSON.stringify(state));
+    if(saveFailed){ saveFailed=false; toast("保存できるようになりました"); }
+  }catch(e){
+    // localStorage は 5MiB/オリジン。ここで黙って落ちると記録が消えるので必ず知らせる
+    if(!saveFailed){ saveFailed=true; alert("この端末に保存できませんでした（容量の上限に達した可能性があります）。\n設定→データ で使用量を確認し、バックアップを書き出してください。"); }
+    try{ toast("⚠ 保存できていません（設定→データ）"); }catch(_){}
+  }
+}
+function storageBytes(){
+  try{ return new Blob([localStorage.getItem(STORE_KEY)||""]).size; }catch(e){ return 0; }
+}
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 /* 記録を触った日は「保存済み」印を外し、翌起動で自動保存し直す */
 function markKeyDirty(k){
@@ -2964,8 +2979,17 @@ function meCollect(){
 }
 /* メモ本文を1行ずつ組む。やることはその場で押せるチェックに、#預り/#返却 は色を付ける */
 const TAG_CLS={"#預り":"hold","#返却":"back","#論点":"issue","#判断":"judge"};
+/* メモに貼ったURL（Driveのファイル・フォルダなど）を開けるようにする。
+   資料そのものはアプリに溜めない＝置き場所はDrive/vaultのまま、という方針の実装 */
+function linkify(html){
+  return html.replace(/https?:\/\/[^\s<（）()「」、。]+/g, u=>{
+    const tail=(u.match(/[.,;:]+$/)||[""])[0];            // 文末の句読点はリンクに含めない
+    const url=u.slice(0, u.length-tail.length);
+    return `<a class="me-link" href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>${tail}`;
+  });
+}
 function tagHTML(raw,q){
-  return hlt(raw,q).replace(/#(預り|返却|論点|判断)/g,m=>`<span class="me-tag ${TAG_CLS[m]}">${m}</span>`);
+  return linkify(hlt(raw,q).replace(/#(預り|返却|論点|判断)/g,m=>`<span class="me-tag ${TAG_CLS[m]}">${m}</span>`));
 }
 function meBodyHTML(memo,q,src){
   return String(memo||"").split(/\r?\n/).map((raw,i)=>{
@@ -3174,6 +3198,7 @@ function renderMemoList(){
     `${r.label} ・ ${items.length}件${dayN?`（うち申し送り ${dayN}件）`:""}${meMode==="todo"?` ・ 未完 ${openN}件`:""}${(meCli||meTask)?" ・ 絞り込み中は申し送りを除く":""}`+
     `${items.length?`<button class="me-copy" id="meCopy">コピー</button>`:""}`;
 
+  document.querySelectorAll("#meList .me-link").forEach(a=>a.onclick=ev=>ev.stopPropagation());
   document.querySelectorAll("#meList .me-card").forEach(el=>el.onclick=()=>{
     selDate=startOfDay(new Date(Number(el.dataset.ms))); setView("log");
   });
@@ -3620,6 +3645,16 @@ function paneRender(t){
       </div>
       <div class="hint">この端末のデータをファイルに書き出し／読み込みします。PC⇄スマホでデータを移すときやバックアップに。<b>自動同期はされません。</b>読み込むと今のデータは置き換わります。</div>
       <div style="margin:10px 4px;font-size:13px;color:var(--ink-soft)">現在：顧問先 <b>${nCli}</b> 件 ／ 記録 <b>${nEnt}</b> 件</div>
+      ${(()=>{ const b=storageBytes(), lim=5*1024*1024, pct=Math.min(100,b/lim*100);
+        const warn=pct>=70;
+        return `<div class="sv-box${warn?" warn":""}" style="margin-bottom:10px">
+          <div class="sv-row"><span>この端末の使用量（上限 5MB）</span>
+            <b class="mono${warn?" bad":""}">${(b/1024).toFixed(0)} KB ・ ${pct.toFixed(1)}%</b></div>
+          <div class="sv-note${warn?"":" ok"}">${warn
+            ? "上限が近づいています。古い記録の整理か、バックアップを書き出してからの削除を検討してください。"
+            : "画像やファイルはここに入れず、DriveやvaultのURLをメモに貼る運用にしています。"}</div>
+          ${saveFailed?`<div class="sv-note" style="color:var(--shu);font-weight:700">⚠ 直前の保存に失敗しています。バックアップを書き出してください。</div>`:""}
+        </div>`; })()}
       <button class="btn-fill" id="expBtn" style="width:100%;margin:4px 0 10px">バックアップを書き出す（JSON）</button>
       <label class="btn-ghost" style="display:block;width:100%;text-align:center;box-sizing:border-box">バックアップを読み込む
         <input type="file" id="impFile" accept="application/json,.json" style="display:none"></label>
