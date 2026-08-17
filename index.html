@@ -272,7 +272,10 @@
   }
   .brief-h{display:flex;align-items:center;gap:7px;margin-bottom:6px}
   .brief-h .t{font-size:11.5px;font-weight:700;color:var(--shu);letter-spacing:.02em}
-  .brief-h .c{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 顧問先名は計測バー・記録行と同じ強さで出す（薄いと「切り替わっていない」と誤読する） */
+  .brief-h .c{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .brief-h .cdot{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
   .brief-h .hist{margin-left:auto;flex:0 0 auto;padding:3px 9px;border-radius:7px;border:1px solid var(--rule-strong);background:var(--paper-2);font-size:11px;font-weight:600;color:var(--ink-soft);cursor:pointer}
   /* 顧問先名のすぐ右：その顧問先の過去メモへの最短の入口（持ち越しに出ない「それ以外」用） */
   .brief-h .notes{flex:0 0 auto;margin-left:1px;padding:3px 9px;border-radius:7px;border:1px solid var(--shu);
@@ -854,7 +857,7 @@
 
 /* 公開版が古いままかを、その場で判別するための版数。
    index.html を差し替えるたびに必ず更新すること（日付＋a,b,c…） */
-const APP_VER = "2026-08-14h";
+const APP_VER = "2026-08-17c";
 const STORE_KEY = "timeTracker.v1";
 const VIEW_START_H = 6;    // タイムライン表示開始
 const VIEW_END_H   = 22;   // 表示終了
@@ -1779,7 +1782,7 @@ function renderBrief(){
   }
   box.innerHTML=`<div class="brief-h">
       <span class="t">前回までの持ち越し</span>
-      <span class="c">${esc((c.code?c.code+" ":"")+c.name)}</span>
+      <span class="c"><span class="cdot" style="background:${c.color}"></span>${esc((c.code?c.code+" ":"")+c.name)}</span>
       <button class="notes" id="briefNotes" title="この顧問先の過去メモを検索して読む">メモ</button>
       <button class="hist" id="briefMat">報告材料</button>
       <button class="hist" id="briefHist">履歴</button>
@@ -2175,6 +2178,7 @@ const CLOSE_STAGES=[
   {k:"d", label:"申告書作成",   tasks:["申告書作成"]},          // 「消費税」は中間申告で誤検知するので入れない
   {k:"e", label:"申告・納付",   tasks:["電子申告・納付"]}   // 自分でやらない場合は申告チェックの「決算申告」と連動
 ];
+const GRACE_DAYS=60;      // 申告期限から何日まで、未完了の決算を出し続けるか
 function monthEnd(y,mo){ return new Date(y,mo+1,0); }               // mo は 0起点
 function shiftWeekend(d){                                            // 土日なら翌月曜（祝日は未対応）
   const x=new Date(d); const w=x.getDay();
@@ -2185,14 +2189,20 @@ function shiftWeekend(d){                                            // 土日�
 function currentClosing(c, base){
   if(!c || !c.fy) return null;
   const t=startOfDay(base||new Date()); const y=t.getFullYear();
+  // 期末月の翌月から出す（作業は期末後に始まる）。
+  // 未完了なら期限を過ぎても居座る（消したければ⑤申告・納付を完了にする）が、
+  // 前の期がいつまでも残ると次の期と紛れるので GRACE_DAYS で頭打ちにする
+  let best=null;
   for(const yy of [y-1,y,y+1]){
     const end=monthEnd(yy,c.fy-1);                                   // 決算月の末日
-    const due=shiftWeekend(monthEnd(yy,c.fy-1+(c.ext?3:2)));         // 申告期限
-    const from=new Date(yy,c.fy,1);                                  // 期末月の翌月から出す（作業は期末後に始まる）
-    const until=new Date(due); until.setDate(until.getDate()+15);
-    if(t>=from && t<=until) return {end, due, key:c.id+"|"+end.getFullYear()+"-"+String(end.getMonth()+1).padStart(2,"0")};
+    const from=new Date(yy,c.fy,1);
+    const due=shiftWeekend(monthEnd(yy,c.fy-1+(c.ext?3:2)));
+    const limit=new Date(due); limit.setDate(limit.getDate()+GRACE_DAYS);   // 超過してもここまでは出す
+    if(t<from || t>limit) continue;
+    if(best && end<=best.end) continue;                              // いちばん新しい期だけを見る
+    best={end, due, key:c.id+"|"+end.getFullYear()+"-"+String(end.getMonth()+1).padStart(2,"0")};
   }
-  return null;
+  return best;
 }
 /* 期末月の前月〜申告期限の記録から、業務名で着手した工程を拾う */
 function closingAuto(c, cl){
@@ -2255,7 +2265,7 @@ function drawClosingBoardHTML(){
       <div class="hint" style="margin:2px">顧問先の決算月がまだ入っていません。下のリストで入れると、ここに進捗が出ます
       （設定→顧問先の編集、設定→一括登録の末尾に月を足す形でも入ります）。</div>`+closingSetupHTML()+`</div>`;
   if(!all.length) return `<div class="cl-card"><div class="cl-h"><span class="t">決算の進捗</span></div>
-      <div class="hint" style="margin:2px">いま走っている決算はありません（期末月の翌月から申告期限まで出ます）。</div>`+closingSetupHTML()+`</div>`;
+      <div class="hint" style="margin:2px">いま走っている決算はありません（期末月の翌月から、申告・納付を完了にするか期限+60日まで出ます）。</div>`+closingSetupHTML()+`</div>`;
   const today=startOfDay(new Date()).getTime();
   const over=rows.filter(r=>startOfDay(r.cl.due).getTime()<today).length;
   let h=`<div class="cl-card"><div class="cl-h"><span class="t">決算の進捗</span>
