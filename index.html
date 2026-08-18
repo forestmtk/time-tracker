@@ -901,7 +901,7 @@
 
 /* 公開版が古いままかを、その場で判別するための版数。
    index.html を差し替えるたびに必ず更新すること（日付＋a,b,c…） */
-const APP_VER = "2026-08-18g";
+const APP_VER = "2026-08-18h";
 const STORE_KEY = "timeTracker.v1";
 const VIEW_START_H = 6;    // タイムライン表示開始
 const VIEW_END_H   = 22;   // 表示終了
@@ -1854,7 +1854,7 @@ function renderBrief(){
   // 期中に聞いた一言が決算で効くので、決算を触った瞬間に取りに行けるようにする
   let fyHTML="";
   if(currentClosing(c)){
-    const fr=fyRangeFor(c,false);
+    const fr=fyRangeFor(c,true);            // 決算を組んでいる期＝直近に終わった期
     const fitems=fr?memoItemsIn(c,fr):[];
     // 0件のとき、その期が「記録を始める前」なのかを区別できるようにする
     let note="";
@@ -1865,7 +1865,7 @@ function renderBrief(){
       else if(first<Infinity && fr.s<first) note="（期の途中から記録）";
     }
     fyHTML=`<div class="brief-fy" id="briefFy">
-        <span class="fy-t">当期のメモ</span>
+        <span class="fy-t">決算期のメモ</span>
         <span class="fy-d">${fr?fr.label:""} ・ ${fitems.length}件${note}</span>
         <button class="fy-b" id="fyOpen">一覧</button>
         <button class="fy-b" id="fyXls"${fitems.length?"":" disabled"}>Excel用</button>
@@ -1901,10 +1901,10 @@ function renderBrief(){
 
   const fyOpen=box.querySelector("#fyOpen");
   if(fyOpen){
-    fyOpen.onclick=ev=>{ ev.stopPropagation(); chMemoPeriod="fy"; openClientHistory(run.clientId,"memo"); };
+    fyOpen.onclick=ev=>{ ev.stopPropagation(); chMemoPeriod="pfy"; openClientHistory(run.clientId,"memo"); };
     box.querySelector("#fyXls").onclick=ev=>{
       ev.stopPropagation();
-      const fr=fyRangeFor(c,false); if(!fr) return;
+      const fr=fyRangeFor(c,true); if(!fr) return;
       const tsv=memoTSV(memoItemsIn(c,fr));
       copyText(tsv,null);
       toast(`当期のメモ ${tsv.split("\n").length-1}行をコピーしました`);
@@ -3421,16 +3421,14 @@ function lastYearWindow(){
 }
 /* 決算期（期首〜期末）の範囲。決算作業の前に「その事業年度に何を話したか」を通しで読むため。
    期中のやりとりが決算に効くので、月や3ヶ月ではなく期で切れる必要がある */
+/* 「今期」＝今日が属する事業年度（進行中）。prev で1つ前＝直近に終わった期＝いま決算を組んでいる期。
+   決算作業のときに読みたいのは prev のほう（期中のやりとり）だが、
+   月次で書いているメモは今期に入るので、両方を切り替えられるようにしてある */
 function fyRangeFor(c, prev){
   if(!c || !c.fy) return null;
-  const cl=currentClosing(c);
-  let end;
-  if(cl) end=cl.end;                                   // いま組んでいる決算期
-  else{
-    const t=startOfDay(new Date());
-    end=monthEnd(t.getFullYear(), c.fy-1);
-    if(end>t) end=monthEnd(t.getFullYear()-1, c.fy-1); // まだ来ていなければ前年の期末
-  }
+  const t=startOfDay(new Date());
+  let end=monthEnd(t.getFullYear(), c.fy-1);
+  if(end<t) end=monthEnd(t.getFullYear()+1, c.fy-1);   // 今期の期末（今日以降で最初に来る決算月末）
   if(prev) end=monthEnd(end.getFullYear()-1, end.getMonth());
   const start=new Date(end.getFullYear()-1, end.getMonth()+1, 1);   // 期首＝期末の翌日の1年前
   return {s:start.getTime(), e:startOfDay(end).getTime()+86400000,
@@ -3568,11 +3566,14 @@ function drawClientHistory(c){
     .map(([k,l])=>`<button data-v="${k}" class="${chView===k?"on":""}">${l}</button>`).join("");
   chMemoClient=c;
   const lyN=chMemoLastYearCount(c);
+  const fyN =c.fy?memoItemsIn(c,fyRangeFor(c,false)).length:0;
+  const pfyN=c.fy?memoItemsIn(c,fyRangeFor(c,true)).length:0;
+  const N={ly:lyN, fy:fyN, pfy:pfyN};
   const memoChips=(c.fy
-      ? [["fy","当期"],["pfy","前期"],["3m","3ヶ月"],["ly","去年の同時期"],["all","全期間"]]
+      ? [["fy","今期"],["pfy","前期（決算中の期）"],["3m","3ヶ月"],["ly","去年の同時期"],["all","全期間"]]
       : [["month","今月"],["3m","3ヶ月"],["1y","1年"],["ly","去年の同時期"],["all","全期間"]])
-    .map(([k,l])=>`<button class="chm-chip${chMemoPeriod===k?" on":""}${k==="ly"&&lyN?" has":""}" data-p="${k}">${l}${
-      k==="ly"?`<span class="chm-n">${lyN}</span>`:""}</button>`).join("");
+    .map(([k,l])=>`<button class="chm-chip${chMemoPeriod===k?" on":""}${N[k]?" has":""}" data-p="${k}">${l}${
+      k in N?`<span class="chm-n">${N[k]}</span>`:""}</button>`).join("");
 
   let body="";
   if(chView==="memo"){
