@@ -45,6 +45,11 @@
     padding:12px 16px calc(12px);border-bottom:1px solid var(--rule);
     background:var(--paper-2);
   }
+  /* 狭い窓でも右端のアイコンが切れないように詰める */
+  @media(max-width:520px){
+    header{gap:4px;padding:8px 8px}
+    header h1,.date-jump{font-size:17px}
+  }
   .today-btn{
     border:1px solid var(--rule-strong);border-radius:8px;padding:7px 12px;
     font-size:13px;font-weight:600;color:var(--ink-soft);background:var(--paper-2);
@@ -70,6 +75,21 @@
   @media(min-width:880px){
     .scroll{flex:0 0 520px}
     .side{display:block;flex:1 1 auto}
+  }
+  /* 狭い窓（監査中にFX2の横へ置くなど）では、タイムラインとメモを切り替えて使う。
+     既定はメモ側。書けないと置いておく意味がない */
+  .pane-seg{display:none}
+  @media(max-width:879px){
+    .work{flex-direction:column}
+    .pane-seg{display:flex;gap:0;flex:0 0 auto;border-bottom:1px solid var(--rule);background:var(--paper-2)}
+    .pane-seg button{flex:1;padding:9px;font-size:12.5px;font-weight:700;color:var(--figure);background:transparent;
+      border-bottom:2px solid transparent}
+    .pane-seg button.on{color:var(--ink);border-bottom-color:var(--shu)}
+    body.pane-log .scroll{display:block;flex:1 1 auto}
+    body.pane-log .side{display:none}
+    body.pane-memo .scroll{display:none}
+    body.pane-memo .side{display:block;flex:1 1 auto;border-left:none}
+    .side{padding-bottom:8px}
   }
   .timeline{position:relative;margin:0;padding:8px 0}
 
@@ -355,6 +375,14 @@
   .due-date{flex:0 0 auto;font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--ink-soft)}
   .brief-j{flex:0 0 auto;padding:2px 8px;border-radius:6px;border:1px solid #2B5FA8;background:var(--paper-2);font-size:10.5px;font-weight:700;color:#2B5FA8;cursor:pointer}
   .brief-prev{background:var(--paper);border:1px solid var(--rule);border-radius:9px;padding:8px 11px;margin:0 0 9px}
+  /* 決算が走っている顧問先だけに出る「当期のメモ」 */
+  .brief-fy{display:flex;align-items:center;gap:8px;background:rgba(46,125,107,.07);
+    border:1px solid rgba(46,125,107,.35);border-radius:9px;padding:6px 10px;margin:0 0 9px}
+  .brief-fy .fy-t{font-size:11px;font-weight:700;color:#2E7D6B;flex:0 0 auto}
+  .brief-fy .fy-d{font-size:11.5px;color:var(--ink-soft);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .brief-fy .fy-b{flex:0 0 auto;padding:2px 9px;border-radius:6px;border:1px solid #2E7D6B;background:var(--paper-2);
+    font-size:10.5px;font-weight:700;color:#2E7D6B;cursor:pointer}
+  .brief-fy .fy-b:disabled{opacity:.4;cursor:default}
   .pv-h{display:flex;align-items:center;gap:8px;margin-bottom:5px}
   .pv-t{font-size:10.5px;font-weight:700;color:var(--figure);border:1px solid var(--rule-strong);border-radius:5px;padding:1px 7px;flex:0 0 auto}
   .pv-d{font-family:var(--font-mono);font-size:11px;color:var(--figure);flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -367,7 +395,7 @@
   .mm-btns.day{margin:4px 22px 0}
   .mm-btn{
     padding:2px 8px;border-radius:6px;border:1px solid var(--rule-strong);background:var(--paper-2);
-    font-size:10.5px;font-weight:600;color:var(--figure);cursor:pointer;line-height:1.6;
+    font-size:10.5px;font-weight:600;color:var(--figure);cursor:pointer;line-height:1.6;white-space:nowrap;
   }
   .mm-btn:hover{color:var(--ink);border-color:var(--ink)}
   .mm-btn.hold:hover{color:var(--shu);border-color:var(--shu)}
@@ -825,6 +853,9 @@
 </header>
 
 <div class="work">
+  <div class="pane-seg" id="paneSeg">
+    <button data-p="log">記録</button><button data-p="memo" class="on">メモ</button>
+  </div>
   <div class="scroll" id="scroll">
     <div class="timeline">
       <div class="grid" id="grid"></div>
@@ -865,7 +896,7 @@
 
 /* 公開版が古いままかを、その場で判別するための版数。
    index.html を差し替えるたびに必ず更新すること（日付＋a,b,c…） */
-const APP_VER = "2026-08-17f";
+const APP_VER = "2026-08-18b";
 const STORE_KEY = "timeTracker.v1";
 const VIEW_START_H = 6;    // タイムライン表示開始
 const VIEW_END_H   = 22;   // 表示終了
@@ -1793,13 +1824,26 @@ function renderBrief(){
         <div class="pv-body" id="pvBody">${shown}</div>
       </div>`;
   }
+  // 決算が走っている顧問先では「当期のメモ」を出す。
+  // 期中に聞いた一言が決算で効くので、決算を触った瞬間に取りに行けるようにする
+  let fyHTML="";
+  if(currentClosing(c)){
+    const fr=fyRangeFor(c,false);
+    const fitems=fr?memoItemsIn(c,fr):[];
+    fyHTML=`<div class="brief-fy" id="briefFy">
+        <span class="fy-t">当期のメモ</span>
+        <span class="fy-d">${fr?fr.label:""} ・ ${fitems.length}件</span>
+        <button class="fy-b" id="fyOpen">一覧</button>
+        <button class="fy-b" id="fyXls"${fitems.length?"":" disabled"}>Excel用</button>
+      </div>`;
+  }
   box.innerHTML=`<div class="brief-h">
       <span class="t">前回までの持ち越し</span>
       <span class="c"><span class="cdot" style="background:${c.color}"></span>${esc((c.code?c.code+" ":"")+c.name)}</span>
       <button class="notes" id="briefNotes" title="この顧問先の過去メモを検索して読む">メモ</button>
       <button class="hist" id="briefMat">報告材料</button>
       <button class="hist" id="briefHist">履歴</button>
-    </div>`+prevHTML+filingHTML(filings)+
+    </div>`+fyHTML+prevHTML+filingHTML(filings)+
     rows.map(r=>`<div class="brief-row" data-ms="${r.ms}">
       <span class="brief-k ${r.k}">${r.label}</span>
       <span class="brief-t">${esc(r.text)}</span>
@@ -1819,6 +1863,18 @@ function renderBrief(){
     btn.onclick=ev=>{ ev.stopPropagation(); open=!open;
       body.innerHTML=(open?lv.lines:lv.lines.slice(0,PREV_LINES)).map(l=>tagHTML(l,"")).join("<br>");
       btn.textContent=open?"閉じる":"全文"; };
+  }
+
+  const fyOpen=box.querySelector("#fyOpen");
+  if(fyOpen){
+    fyOpen.onclick=ev=>{ ev.stopPropagation(); chMemoPeriod="fy"; openClientHistory(run.clientId,"memo"); };
+    box.querySelector("#fyXls").onclick=ev=>{
+      ev.stopPropagation();
+      const fr=fyRangeFor(c,false); if(!fr) return;
+      const tsv=memoTSV(memoItemsIn(c,fr));
+      copyText(tsv,null);
+      toast(`当期のメモ ${tsv.split("\n").length-1}行をコピーしました`);
+    };
   }
 
   // 顧問先名の右の「メモ」＝持ち越しに出ない過去メモへの最短の入口（シートで重なるので計測画面に戻れる）
@@ -2176,6 +2232,21 @@ document.getElementById("sumBtn").onclick=()=>{
   setView(appView==="analysis"?"log":"analysis");
 };
 document.getElementById("memoBtn").onclick=()=>{ setView(appView==="memo"?"log":"memo"); };
+
+/* 狭い窓のときのペイン切替（既定はメモ側） */
+let narrowPane = localStorage.getItem("timeTracker.pane") || "memo";
+function applyPane(){
+  document.body.classList.toggle("pane-log", narrowPane==="log");
+  document.body.classList.toggle("pane-memo", narrowPane==="memo");
+  document.querySelectorAll("#paneSeg button").forEach(b=>b.classList.toggle("on", b.dataset.p===narrowPane));
+}
+document.querySelectorAll("#paneSeg button").forEach(b=>b.onclick=()=>{
+  narrowPane=b.dataset.p;
+  try{ localStorage.setItem("timeTracker.pane", narrowPane); }catch(e){}
+  applyPane();
+  if(narrowPane==="log") scrollToRelevant();
+});
+applyPane();
 
 /* ============================================================
    決算の進捗（毎月まわってくる本業。工数の集計より先に見たいもの）
@@ -3344,8 +3415,8 @@ function chMemoLastYearCount(c){
   return n;
 }
 /* その顧問先のメモだけ。全体メモ(dayMemos)は顧問先に属さないので入れない（メモ画面と同じ扱い） */
-function chMemoItems(c){
-  const r=chMemoRange(), q=chMemoQ.trim().toLowerCase(), now=Date.now();
+function memoItemsIn(c, r, q){
+  q=(q||"").trim().toLowerCase(); const now=Date.now();
   const out=[];
   for(const e of state.entries){
     if(e.clientId!==c.id) continue;
@@ -3355,6 +3426,22 @@ function chMemoItems(c){
     out.push({ms:e.start, e, memo, dur:((e.end||now)-e.start)/60000});
   }
   return out.sort((a,b)=>b.ms-a.ms);   // 新しい順
+}
+function chMemoItems(c){ return memoItemsIn(c, chMemoRange(), chMemoQ); }
+/* 決算をまとめるエクセルにそのまま貼る用（1行1レコードのTSV）。
+   セル内改行は貼り付けで崩れるので、メモは行ごとにばらして出す */
+function memoTSV(items){
+  const L=["日付\t業務\t内容"];
+  for(const it of items){
+    const d=new Date(it.ms);
+    const day=`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+    const task=(it.e.task||"").replace(/[\t\r\n]/g," ");
+    it.memo.split(/\r?\n/).forEach(line=>{
+      const x=line.trim(); if(!x) return;
+      L.push(`${day}\t${task}\t${x.replace(/[\t\r\n]/g," ")}`);
+    });
+  }
+  return L.join("\n");
 }
 function chMemoCardHTML(it){
   const d=new Date(it.ms);
@@ -3401,22 +3488,11 @@ function chMemoRefresh(c){
     ev.stopPropagation();
     if(toggleTodoEntry(el.dataset.id,Number(el.dataset.line))){ chMemoRefresh(c); renderAll(); }
   });
-  // 決算をまとめるエクセルにそのまま貼る用（1行1レコードのTSV）。
-   // セル内改行は貼り付けで崩れるので、メモは行ごとにばらして出す
   const xl=document.getElementById("chmXls");
   if(xl) xl.onclick=()=>{
-    const L=["日付\t業務\t内容"];
-    for(const it of items){
-      const d=new Date(it.ms);
-      const day=`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
-      const task=(it.e.task||"").replace(/[\t\r\n]/g," ");
-      it.memo.split(/\r?\n/).forEach(line=>{
-        const x=line.trim(); if(!x) return;
-        L.push(`${day}\t${task}\t${x.replace(/[\t\r\n]/g," ")}`);
-      });
-    }
-    copyText(L.join("\n"),null);
-    toast(`${L.length-1}行をコピーしました（Excelに貼り付け）`);
+    const tsv=memoTSV(items);
+    copyText(tsv,null);
+    toast(`${tsv.split("\n").length-1}行をコピーしました（Excelに貼り付け）`);
   };
   const cp=document.getElementById("chmCopy");
   if(cp) cp.onclick=()=>{
