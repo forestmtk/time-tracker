@@ -447,6 +447,10 @@
   .cl-due{font-family:var(--font-mono);font-size:11.5px;font-weight:700;text-align:right;white-space:nowrap}
   .cl-left{font-family:var(--font-mono);font-size:11px;text-align:right;white-space:nowrap;color:var(--figure)}
   .cl-left.hot{color:var(--shu);font-weight:700}
+  .cl-fin{padding:2px 9px;border-radius:6px;border:1px solid var(--rule-strong);background:var(--paper);
+    font-size:10.5px;font-weight:700;color:var(--figure);cursor:pointer;white-space:nowrap}
+  .cl-fin:hover{border-color:#2E7D6B;color:#2E7D6B}
+  .cl-fin.on{border-color:var(--rule-strong);color:var(--ink-soft)}
   .ana-nav{display:flex;align-items:center;gap:6px}
   .ana-nav button{width:34px;height:34px;border-radius:9px;border:1px solid var(--rule);background:var(--paper-2);color:var(--ink-soft);font-size:18px;display:grid;place-items:center}
   .ana-nav button:hover{border-color:var(--figure);color:var(--ink)}
@@ -602,6 +606,7 @@
   .hint{font-size:12px;color:var(--figure);margin:6px 4px}
   .tasklist-item{display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--rule)}
   .tasklist-item .nm{flex:1}
+  .mg-head{margin:20px 2px 4px;padding-top:12px;border-top:1px solid var(--rule);font-size:12px;font-weight:700;color:var(--ink-soft)}
   .tk-stage{font-size:10.5px;font-weight:700;color:#2E7D6B;border:1px solid #2E7D6B;border-radius:5px;padding:1px 6px;white-space:nowrap}
   .tasklist-item .ord{display:flex;flex-direction:column;gap:2px;flex:0 0 auto}
   .tasklist-item .mv{width:26px;height:18px;display:flex;align-items:center;justify-content:center;
@@ -896,7 +901,7 @@
 
 /* 公開版が古いままかを、その場で判別するための版数。
    index.html を差し替えるたびに必ず更新すること（日付＋a,b,c…） */
-const APP_VER = "2026-08-18b";
+const APP_VER = "2026-08-18e";
 const STORE_KEY = "timeTracker.v1";
 const VIEW_START_H = 6;    // タイムライン表示開始
 const VIEW_END_H   = 22;   // 表示終了
@@ -1442,15 +1447,25 @@ function renderTaskPicker(client){
   sheetHead.innerHTML=`<button class="back" id="backCli">‹</button><h2>${esc((client.code?client.code+" ":"")+client.name)}</h2>`;
   document.getElementById("backCli").onclick=renderClientPicker;
   const tasks=state.tasks[setKey];
+  // 自由入力は残す（実務で必要）が、入れた名前は業務リストに足す。
+  // そうしないと同じ仕事が「源泉納特／源泉納付／源泉納付書」のように分かれ続ける
+  const known=[...new Set([...state.tasks.client,...state.tasks.internal,
+    ...state.entries.map(e=>(e.task||"").trim()).filter(Boolean)])].sort();
   sheetBody.innerHTML=`<div class="list-label">業務内容を選ぶ</div><div class="chip-wrap" id="taskChips"></div>
-    <div class="add-inline"><input id="customTask" placeholder="その他の業務を入力" autocomplete="off"><button id="customGo">開始</button></div>`;
+    <div class="add-inline"><input id="customTask" placeholder="その他の業務を入力" autocomplete="off" list="taskCands"><button id="customGo">開始</button></div>
+    <datalist id="taskCands">${known.map(t=>`<option value="${esc(t)}"></option>`).join("")}</datalist>
+    <div class="hint" style="margin:6px 4px">ここで入れた業務は<b>一覧に追加</b>されます（次からは選べます）。似た名前は候補に出ます。</div>`;
   const wrap=document.getElementById("taskChips");
   tasks.forEach(t=>{
     const c=document.createElement("button"); c.className="chip"; c.textContent=t;
     c.onclick=()=>{ closeSheet(); startTracking(client.id,t); toast("計測を開始しました"); };
     wrap.appendChild(c);
   });
-  const go=()=>{ const v=document.getElementById("customTask").value.trim(); if(!v)return; closeSheet(); startTracking(client.id,v); toast("計測を開始しました"); };
+  const go=()=>{
+    const v=document.getElementById("customTask").value.trim(); if(!v)return;
+    if(!state.tasks[setKey].includes(v)){ state.tasks[setKey].push(v); save(); }   // 次から選べるようにする
+    closeSheet(); startTracking(client.id,v); toast("計測を開始しました");
+  };
   document.getElementById("customGo").onclick=go;
   document.getElementById("customTask").addEventListener("keydown",e=>{ if(e.key==="Enter")go(); });
 }
@@ -2258,7 +2273,7 @@ applyPane();
 /* 実務の26ステップを、待ちの前後で8つに畳んだもの（決算業務フロー_森岡担当.md）。
    tasks＝業務名から着手を拾う／sends＝#提出 のラベルから「提出中（待ち）」と「戻った＝完了」を拾う */
 const CLOSE_STAGES=[
-  {k:"a", label:"監査・受領",   short:"監査・受領", tasks:["記帳・仕訳チェック"], sends:[]},   // #預り でも着手
+  {k:"a", label:"監査・受領",   short:"監査・受領", tasks:["巡回監査","記帳・仕訳チェック"], sends:[]},   // #預り でも着手
   {k:"b", label:"決算整理",     short:"決算整理",   tasks:["決算・決算見込"],     sends:[]},
   {k:"c", label:"申告書作成",   short:"申告書",     tasks:["申告書作成"],         sends:[]},   // 「消費税」は中間で誤検知するので入れない
   {k:"d", label:"1次検閲",      short:"1次検閲",    tasks:[],                     sends:["1次","一次"]},
@@ -2353,13 +2368,15 @@ function closingRowHTML(r, today){
     else if(a==="doing"){ cls="doing auto"; txt="着手"; }
     h+=`<td><button class="cl-cell ${cls}" data-key="${r.cl.key}" data-st="${st.k}">${txt}</button></td>`;
   }
+  const fin=closingVal(r.cl.key,CLOSE_LAST)===2;
   return h+`<td class="cl-due">${r.cl.due.getMonth()+1}/${r.cl.due.getDate()}</td>
-      <td class="cl-left${left<=14?" hot":""}">${left<0?`${-left}日超過`:`${left}日`}</td></tr>`;
+      <td class="cl-left${left<=14?" hot":""}">${left<0?`${-left}日超過`:`${left}日`}</td>
+      <td><button class="cl-fin${fin?" on":""}" data-key="${r.cl.key}" title="${fin?"ボードに戻す":"この決算を完了にして畳む（事後処理・返却を完了にします）"}">${fin?"戻す":"完了"}</button></td></tr>`;
 }
 function closingHeadHTML(){
   let h=`<tr><th class="l">顧問先</th>`;
   for(const st of CLOSE_STAGES) h+=`<th title="${st.label}">${st.short}</th>`;
-  return h+`<th>申告期限</th><th>残り</th></tr>`;
+  return h+`<th>申告期限</th><th>残り</th><th></th></tr>`;
 }
 function drawClosingBoardHTML(){
   const all=closingRows();
@@ -2500,6 +2517,12 @@ function renderAnalysis(){
   if(cp) cp.onclick=()=>copyText(buildMonthSummaryText(anaMonth,cliRows),null);
   anaInner.querySelectorAll(".sum-row.clickable").forEach(el=>el.onclick=()=>openClientHistory(el.dataset.cid));
   anaInner.querySelectorAll(".cl-cell").forEach(b=>b.onclick=()=>{ closingBump(b.dataset.key,b.dataset.st); renderAnalysis(); });
+  // 行の「完了」＝最終工程を完了にして畳む（終わった決算の棚卸し用）
+  anaInner.querySelectorAll(".cl-fin").forEach(b=>b.onclick=()=>{
+    const st=closingState(); if(!st[b.dataset.key]) st[b.dataset.key]={};
+    st[b.dataset.key][CLOSE_LAST] = st[b.dataset.key][CLOSE_LAST]===2 ? 0 : 2;
+    save(); renderAnalysis();
+  });
   anaInner.querySelectorAll(".cl-cli").forEach(el=>el.onclick=()=>openClientHistory(el.dataset.cid,"memo"));
   anaInner.querySelectorAll(".cl-fy-sel").forEach(sel=>sel.onchange=()=>{
     const c=getClient(sel.dataset.cid); const v=parseInt(sel.value,10);
@@ -4018,11 +4041,12 @@ function taskPaneRender(k){
   const list=state.tasks[k];
   pane.innerHTML=`${k==="client"?`<div class="hint" style="margin:2px 2px 8px">
       決算の進捗は<b>業務名</b>から自動で「着手」を拾います。対応するものには右に印が出ます。<br>
-      いま拾えるのは <b>記帳・仕訳チェック／決算・決算見込／申告書作成／決算報告／電子申告・納付</b> です。
+      いま拾えるのは <b>巡回監査／記帳・仕訳チェック／決算・決算見込／申告書作成／決算報告／電子申告・納付</b> です。
       検閲・捺印・税理士署名・確定日付は業務ではなく <b>#提出</b>／<b>#戻り</b> で拾います（①受領は <b>#預り</b>）。
       消費税の中間申告は決算と別なので、<b>消費税中間</b> のように決算と混ざらない名前にしてください。</div>`:""}
     <div id="taskItems"></div>
-    <div class="add-inline"><input id="newTask" placeholder="業務を追加" autocomplete="off"><button id="newTaskGo">追加</button></div>`;
+    <div class="add-inline"><input id="newTask" placeholder="業務を追加" autocomplete="off"><button id="newTaskGo">追加</button></div>
+    <div class="mg-head">表記ゆれの整理</div><div id="mergePane"></div>`;
   const items=document.getElementById("taskItems");
   list.forEach((t,i)=>{
     const row=document.createElement("div"); row.className="tasklist-item";
@@ -4038,6 +4062,36 @@ function taskPaneRender(k){
     items.appendChild(row);
   });
   const add=()=>{ const v=document.getElementById("newTask").value.trim(); if(!v)return; if(!list.includes(v))list.push(v); save(); taskPaneRender(k); };
+  // 表記ゆれの整理：過去の記録の業務名ごと置き換える
+  const used={};
+  for(const e of state.entries){ const t=(e.task||"").trim(); if(t) used[t]=(used[t]||0)+1; }
+  const names=[...new Set([...list, ...Object.keys(used)])].sort();
+  const mg=document.getElementById("mergePane");
+  if(mg && names.length>1){
+    const opt=sel=>names.map(t=>`<option value="${esc(t)}"${t===sel?" selected":""}>${esc(t)}${used[t]?`（${used[t]}件）`:"（記録なし）"}${list.includes(t)?"":" ※一覧に無い"}</option>`).join("");
+    mg.innerHTML=`<div class="hint" style="margin:2px 2px 6px">同じ仕事が別の名前で記録されていたら、ここでまとめられます。
+        <b>過去の記録の業務名も書き換わります</b>（元に戻せないので、先に設定→データでバックアップを）。</div>
+      <div class="add-inline" style="gap:6px;flex-wrap:wrap">
+        <select id="mgFrom" class="me-sel">${opt()}</select>
+        <span style="font-size:12px;color:var(--figure)">を</span>
+        <select id="mgTo" class="me-sel">${opt()}</select>
+        <span style="font-size:12px;color:var(--figure)">にまとめる</span>
+        <button id="mgGo">実行</button>
+      </div>`;
+    document.getElementById("mgGo").onclick=()=>{
+      const a=document.getElementById("mgFrom").value, b=document.getElementById("mgTo").value;
+      if(!a||!b||a===b){ toast("違う業務を選んでください"); return; }
+      if(!confirm(`「${a}」の記録 ${used[a]||0}件 を「${b}」に書き換えます。よろしいですか？`)) return;
+      let n=0;
+      for(const e of state.entries) if((e.task||"").trim()===a){ e.task=b; markDayDirty(e.start); n++; }
+      for(const key of ["client","internal"]){
+        const L=state.tasks[key]; const i=L.indexOf(a);
+        if(i>=0){ L.splice(i,1); if(!L.includes(b)) L.push(b); }
+      }
+      save(); taskPaneRender(k); renderAll();
+      toast(`${n}件を「${b}」にまとめました`);
+    };
+  }
   document.getElementById("newTaskGo").onclick=add;
   document.getElementById("newTask").addEventListener("keydown",e=>{ if(e.key==="Enter")add(); });
 }
