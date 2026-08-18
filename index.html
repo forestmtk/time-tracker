@@ -901,7 +901,7 @@
 
 /* 公開版が古いままかを、その場で判別するための版数。
    index.html を差し替えるたびに必ず更新すること（日付＋a,b,c…） */
-const APP_VER = "2026-08-18e";
+const APP_VER = "2026-08-18g";
 const STORE_KEY = "timeTracker.v1";
 const VIEW_START_H = 6;    // タイムライン表示開始
 const VIEW_END_H   = 22;   // 表示終了
@@ -1724,24 +1724,31 @@ function buildMemoBtns(host,ta,commit,withHold){
    いま書いている記録そのもののやることは出さない（持ち越しだけを見せる） */
 /* 前回：同じ顧問先で、基準日より前の直近の作業日。その日の作業メモ＋全体メモをまとめて返す。
    訪問先で「前回何を話したか」を、探しに行かず視線の先で読めるようにするための材料 */
+/* 「前回メモ」＝直近の作業日ではなく、直近の“メモが書いてある日”を返す。
+   決算作業中は無言の作業日が続くので、直近日だけを見ると前回の話が消えてしまう */
 function lastVisit(clientId, beforeMs){
   const base=startOfDay(new Date(beforeMs)).getTime();
   const prior=state.entries
     .filter(e=>e.clientId===clientId && startOfDay(new Date(e.start)).getTime()<base)
     .sort((a,b)=>b.start-a.start);
   if(!prior.length) return null;
-  const dayMs=startOfDay(new Date(prior[0].start)).getTime();
-  const key=dateKey(new Date(dayMs));
-  const sameDay=prior.filter(e=>startOfDay(new Date(e.start)).getTime()===dayMs)
-                     .sort((a,b)=>a.start-b.start);
-  const lines=[];
-  const dm=(state.dayMemos[key]||"").trim();
-  if(dm) dm.split(/\r?\n/).forEach(l=>{ if(l.trim()) lines.push(l.trim()); });
-  for(const e of sameDay){
-    const m=(e.memo||"").trim(); if(!m) continue;
-    m.split(/\r?\n/).forEach(l=>{ if(l.trim()) lines.push(l.trim()); });
+  const days=[...new Set(prior.map(e=>startOfDay(new Date(e.start)).getTime()))];   // 新しい順
+  const lastDay=days[0];
+  for(const dayMs of days){
+    const key=dateKey(new Date(dayMs));
+    const sameDay=prior.filter(e=>startOfDay(new Date(e.start)).getTime()===dayMs)
+                       .sort((a,b)=>a.start-b.start);
+    const lines=[];
+    const dm=(state.dayMemos[key]||"").trim();
+    if(dm) dm.split(/\r?\n/).forEach(l=>{ if(l.trim()) lines.push(l.trim()); });
+    for(const e of sameDay){
+      const m=(e.memo||"").trim(); if(!m) continue;
+      m.split(/\r?\n/).forEach(l=>{ if(l.trim()) lines.push(l.trim()); });
+    }
+    if(lines.length) return {ms:dayMs, tasks:[...new Set(sameDay.map(e=>e.task).filter(Boolean))],
+                             lines, skipped: dayMs!==lastDay, lastDay};
   }
-  return {ms:dayMs, tasks:[...new Set(sameDay.map(e=>e.task).filter(Boolean))], lines};
+  return null;
 }
 
 /* 今月の申告セクション（ブリーフ内）。チェックで消える。★は重要（朱） */
@@ -1817,7 +1824,9 @@ function renderBrief(){
   const filings=filingsFor(run.clientId);              // 今月の申告（完了ぶんも取り消し線で残す）
   const lv=lastVisit(run.clientId, selDate.getTime());
   const hasPrev = lv && lv.lines.length;
-  if(!holds.length && !issues.length && !sends.length && !todos.length && !filings.length && !hasPrev) return;
+  // 決算が走っているなら、持ち越しが空でもブリーフは出す（当期のメモの入口になるため）
+  if(!holds.length && !issues.length && !sends.length && !todos.length && !filings.length && !hasPrev
+     && !currentClosing(c)) return;
 
   const rows=[]
     .concat(sends.map(x=>({k:"send",label:"提出",text:x.label,ms:x.ms})))   // 戻り待ち＝いちばん先に見たい
@@ -1830,7 +1839,9 @@ function renderBrief(){
   let prevHTML="";
   if(lv && lv.lines.length){
     const d=new Date(lv.ms);
-    const head=`${d.getMonth()+1}/${d.getDate()}（${DOW[d.getDay()]}）${agoLabel(lv.ms)}${lv.tasks.length?" ・ "+esc(lv.tasks.join("、")):""}`;
+    const ld=new Date(lv.lastDay);
+    const head=`${d.getMonth()+1}/${d.getDate()}（${DOW[d.getDay()]}）${agoLabel(lv.ms)}${lv.tasks.length?" ・ "+esc(lv.tasks.join("、")):""}`+
+      (lv.skipped?`　<span style="color:var(--figure)">※直近の作業は ${ld.getMonth()+1}/${ld.getDate()}（メモなし）</span>`:"");
     const shown=lv.lines.slice(0,PREV_LINES).map(l=>tagHTML(l,"")).join("<br>");
     const more=lv.lines.length>PREV_LINES;
     prevHTML=`<div class="brief-prev" id="briefPrev">
@@ -1845,9 +1856,17 @@ function renderBrief(){
   if(currentClosing(c)){
     const fr=fyRangeFor(c,false);
     const fitems=fr?memoItemsIn(c,fr):[];
+    // 0件のとき、その期が「記録を始める前」なのかを区別できるようにする
+    let note="";
+    if(fr && !fitems.length){
+      let first=Infinity;
+      for(const e of state.entries) if(e.start<first) first=e.start;
+      if(first<Infinity && fr.e<=first) note="（記録開始前の期）";
+      else if(first<Infinity && fr.s<first) note="（期の途中から記録）";
+    }
     fyHTML=`<div class="brief-fy" id="briefFy">
         <span class="fy-t">当期のメモ</span>
-        <span class="fy-d">${fr?fr.label:""} ・ ${fitems.length}件</span>
+        <span class="fy-d">${fr?fr.label:""} ・ ${fitems.length}件${note}</span>
         <button class="fy-b" id="fyOpen">一覧</button>
         <button class="fy-b" id="fyXls"${fitems.length?"":" disabled"}>Excel用</button>
       </div>`;
