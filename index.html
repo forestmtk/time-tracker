@@ -242,6 +242,8 @@
   .me-tag.back{color:#2E7D6B;background:rgba(46,125,107,.10)}
   .me-tag.issue{color:#2B5FA8;background:rgba(43,95,168,.10)}
   .me-tag.judge{color:#6B4CA8;background:rgba(107,76,168,.11)}
+  .me-tag.send{color:#7A5AA8;background:rgba(122,90,168,.12)}
+  .me-tag.ret{color:#2E7D6B;background:rgba(46,125,107,.10)}
 
   /* --- 預り台帳ボード --- */
   .hd-note{font-size:11.5px;color:var(--figure);margin:0 2px 10px;line-height:1.6}
@@ -262,6 +264,7 @@
   .hd-row.stale{background:var(--shu-soft)}
   .hd-row.stale .hd-age{color:var(--shu)}
   .hd-row.issue{border-left-color:#2B5FA8}
+  .hd-row.send{border-left-color:#7A5AA8}
   .hd-row.judged{border-left-color:#6B4CA8;background:var(--paper-2)}
   .hd-row.judged .hd-label{font-weight:500}
 
@@ -287,6 +290,7 @@
   .brief-k.hold{color:var(--shu);border:1px solid var(--shu)}
   .brief-k.todo{color:var(--ink-soft);border:1px solid var(--rule-strong)}
   .brief-k.issue{color:#2B5FA8;border:1px solid #2B5FA8}
+  .brief-k.send{color:#7A5AA8;border:1px solid #7A5AA8}
   .brief-t{font-size:12.5px;color:var(--ink);flex:1 1 auto;word-break:break-word}
   .brief-a{font-family:var(--font-mono);font-size:11px;color:var(--figure);flex:0 0 auto}
   .brief.overview .brief-h{margin-bottom:8px}
@@ -299,6 +303,7 @@
   .ov-k{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
   .ov-k.hold{background:var(--shu)}
   .ov-k.issue{background:#2B5FA8}
+  .ov-k.send{background:#7A5AA8}
   .ov-k.todo{background:var(--ink-soft)}
   .ov-k.fl{background:#B8860B}
 
@@ -368,6 +373,7 @@
   .mm-btn.hold:hover{color:var(--shu);border-color:var(--shu)}
   .mm-btn.issue:hover{color:#2B5FA8;border-color:#2B5FA8}
   .mm-btn.judge:hover{color:#6B4CA8;border-color:#6B4CA8}
+  .mm-btn.send:hover{color:#7A5AA8;border-color:#7A5AA8}
 
   /* --- 顧問先選択の持ち越しバッジ --- */
   .pick-flags{margin-left:auto;display:flex;gap:4px;flex:0 0 auto}
@@ -375,6 +381,7 @@
   .pick-flag.hold{color:var(--shu);border:1px solid var(--shu);background:var(--shu-soft)}
   .pick-flag.issue{color:#2B5FA8;border:1px solid #2B5FA8;background:rgba(43,95,168,.09)}
   .pick-flag.todo{color:var(--ink-soft);border:1px solid var(--rule-strong)}
+  .pick-flag.send{color:#7A5AA8;border:1px solid #7A5AA8;background:rgba(122,90,168,.09)}
   @media(max-width:900px){
     .me-cli{max-width:150px}
     .me-time{margin-left:0}
@@ -857,7 +864,7 @@
 
 /* 公開版が古いままかを、その場で判別するための版数。
    index.html を差し替えるたびに必ず更新すること（日付＋a,b,c…） */
-const APP_VER = "2026-08-17c";
+const APP_VER = "2026-08-17d";
 const STORE_KEY = "timeTracker.v1";
 const VIEW_START_H = 6;    // タイムライン表示開始
 const VIEW_END_H   = 22;   // 表示終了
@@ -1363,7 +1370,7 @@ function renderClientPicker(){
     <div id="cliList"></div>`;
   const inp=document.getElementById("cliSearch");
   const draw=()=>{
-    _pickHM=holdMap(); _pickTM=todoMap(); _pickIM=issueMap();   // 1回だけ組んで全行で使い回す
+    _pickHM=holdMap(); _pickTM=todoMap(); _pickIM=issueMap(); _pickSM=sendMap();   // 1回だけ組んで全行で使い回す
     _pickFYM=currentYM();
     const q=(inp.value||"").trim().toLowerCase();
     const list=document.getElementById("cliList"); list.innerHTML="";
@@ -1382,15 +1389,16 @@ function renderClientPicker(){
   };
   inp.oninput=draw; draw();
 }
-let _pickHM=null,_pickTM=null,_pickIM=null,_pickFYM=null;   // 顧問先選択で使う持ち越しの下ごしらえ
+let _pickHM=null,_pickTM=null,_pickIM=null,_pickSM=null,_pickFYM=null;   // 顧問先選択で使う持ち越しの下ごしらえ
 function pickRow(c,special){
   const b=document.createElement("button");
   b.className="pick"+(special?" special":"");
   const nh=(_pickHM&&_pickHM.get(c.id)||[]).length;
   const nt=(_pickTM&&_pickTM.get(c.id)||[]).length;
   const ni=(_pickIM&&_pickIM.get(c.id)||[]).length;
+  const ns=(_pickSM&&_pickSM.get(c.id)||[]).length;
   const nf=openFilingsFor(c.id,_pickFYM).length;
-  const flags=(nh||nt||ni||nf)?`<span class="pick-flags">${nf?`<span class="pick-flag fl">申${nf}</span>`:""}${nh?`<span class="pick-flag hold">預${nh}</span>`:""}${ni?`<span class="pick-flag issue">論${ni}</span>`:""}${nt?`<span class="pick-flag todo">未${nt}</span>`:""}</span>`:"";
+  const flags=(nh||nt||ni||ns||nf)?`<span class="pick-flags">${nf?`<span class="pick-flag fl">申${nf}</span>`:""}${ns?`<span class="pick-flag send">提${ns}</span>`:""}${nh?`<span class="pick-flag hold">預${nh}</span>`:""}${ni?`<span class="pick-flag issue">論${ni}</span>`:""}${nt?`<span class="pick-flag todo">未${nt}</span>`:""}</span>`:"";
   b.innerHTML=`<span class="dot" style="background:${c.color}"></span>
     <span class="code mono">${esc(c.code)}</span>
     <span class="nm">${esc(c.name)}</span>${flags}`;
@@ -1651,7 +1659,7 @@ function autoGrow(t){ t.style.height="auto"; t.style.height=Math.max(32,t.scroll
 function buildMemoBtns(host,ta,commit,withHold){
   host.innerHTML="";
   const defs=[["☐ やること","- [ ] ",""]];
-  if(withHold){ defs.push(["#預り","#預り ","hold"],["#返却","#返却 ","hold"],["#論点","#論点 ","issue"],["#判断","#判断 ","judge"]); }
+  if(withHold){ defs.push(["#預り","#預り ","hold"],["#返却","#返却 ","hold"],["#論点","#論点 ","issue"],["#判断","#判断 ","judge"],["#提出","#提出 ","send"],["#戻り","#戻り ","send"]); }
   for(const [label,snippet,cls] of defs){
     const b=document.createElement("button");
     b.type="button"; b.className="mm-btn"+(cls?" "+cls:""); b.textContent=label;
@@ -1713,10 +1721,11 @@ function renderBrief(){
     if(!isSameDay(selDate,new Date())) return;   // 今日の画面でだけ出す（過去日を遡って見ているときは邪魔）
     const holdN=holdLedger().length, holdStale=holdLedger().filter(h=>daysAgo(h.ms)>=14).length;
     const issN=issueLedger().length, issStale=issueLedger().filter(h=>daysAgo(h.ms)>=30).length;
+    const sndN=sendLedger().length, sndStale=sendLedger().filter(h=>daysAgo(h.ms)>=SEND_STALE).length;
     let todoN=0; for(const l of todoMap().values()) todoN+=l.length;
     const fl=allOpenFilings();
     const ds=dueSoonSummary();
-    if(!holdN && !issN && !todoN && !fl.n && !ds.list.length) return;
+    if(!holdN && !issN && !sndN && !todoN && !fl.n && !ds.list.length) return;
 
     const pill=(cls,txt,mode,stale)=>`<button class="ov-pill${stale?" stale":""}" data-mode="${mode}">
         <span class="ov-k ${cls}"></span>${txt}</button>`;
@@ -1738,6 +1747,7 @@ function renderBrief(){
       ${dueBanner}
       <div class="ov-pills">
         ${fl.n?pill("fl",`今月の申告 残${fl.n}件${fl.star?`（重要 ${fl.star}）`:""}`,"__filings",fl.star):""}
+        ${sndN?pill("send",`提出中 ${sndN}件${sndStale?`（${SEND_STALE}日↑ ${sndStale}）`:""}`,"send",sndStale):""}
         ${holdN?pill("hold",`預り ${holdN}件${holdStale?`（14日↑ ${holdStale}）`:""}`,"hold",holdStale):""}
         ${issN?pill("issue",`論点 ${issN}件${issStale?`（30日↑ ${issStale}）`:""}`,"issue",issStale):""}
         ${todoN?pill("todo",`未完 ${todoN}件`,"todo",false):""}
@@ -1755,13 +1765,15 @@ function renderBrief(){
   const c=getClient(run.clientId);
   const holds=holdMap().get(run.clientId)||[];
   const issues=issueMap().get(run.clientId)||[];
+  const sends=sendMap().get(run.clientId)||[];
   const todos=(todoMap().get(run.clientId)||[]).filter(t=>t.entryId!==run.id);
   const filings=filingsFor(run.clientId);              // 今月の申告（完了ぶんも取り消し線で残す）
   const lv=lastVisit(run.clientId, selDate.getTime());
   const hasPrev = lv && lv.lines.length;
-  if(!holds.length && !issues.length && !todos.length && !filings.length && !hasPrev) return;
+  if(!holds.length && !issues.length && !sends.length && !todos.length && !filings.length && !hasPrev) return;
 
   const rows=[]
+    .concat(sends.map(x=>({k:"send",label:"提出",text:x.label,ms:x.ms})))   // 戻り待ち＝いちばん先に見たい
     .concat(holds.map(h=>({k:"hold",label:"預り",text:h.label,ms:h.ms})))
     .concat(issues.map(x=>({k:"issue",label:"論点",text:x.label,ms:x.ms})))
     .concat(todos.map(t=>({k:"todo",label:"未完",text:t.text||"(内容なし)",ms:t.ms})));
@@ -2637,7 +2649,7 @@ function chRange(){
    郵送は送付書が残るので追える。持参のときに欠けるのが「向きの記録」で、そこを埋めるのが #預り/#返却。
 ============================================================ */
 const RE_TODO=/^[-*・]?\s*\[([ xX])\]\s*(.*)$/;
-const RE_TAG=/#(預り|返却|論点|判断)\s*(.*)$/;
+const RE_TAG=/#(預り|返却|論点|判断|提出|戻り)\s*(.*)$/;
 
 /* タグは2対だけ。「開く」タグは、対応する「閉じる」タグが来るまで未処理として残り続ける。
    預り→返却 … 現物書類の向き（いま手元にあるか）
@@ -2645,6 +2657,9 @@ const RE_TAG=/#(預り|返却|論点|判断)\s*(.*)$/;
 const TAG_PAIRS=[
   {key:"hold", open:"預り", close:"返却", noun:"預り",   fallback:"書類"},
   {key:"issue",open:"論点", close:"判断", noun:"論点",   fallback:"論点"},
+  // 決算は「出す→戻る」の往復が5回ある（1次検閲・捺印・2次検閲・署名税理士・確定日付）。
+  // 待ちの時間は計測に現れないので、開閉タグでしか追えない
+  {key:"send", open:"提出", close:"戻り", noun:"提出",   fallback:"書類"},
 ];
 
 /* メモ1件を走査して、やること と タグを取り出す */
@@ -2694,6 +2709,7 @@ function pairLedger(pair){
 }
 function holdLedger(){  return pairLedger(TAG_PAIRS[0]); }   // まだ手元にある現物
 function issueLedger(){ return pairLedger(TAG_PAIRS[1]); }   // まだ判断が出ていない論点
+function sendLedger(){  return pairLedger(TAG_PAIRS[2]); }   // 出したまま戻ってきていない書類
 function byClient(list){
   const m=new Map();
   for(const x of list){ if(!m.has(x.clientId)) m.set(x.clientId,[]); m.get(x.clientId).push(x); }
@@ -2701,6 +2717,8 @@ function byClient(list){
 }
 function holdMap(){  return byClient(holdLedger()); }
 function issueMap(){ return byClient(issueLedger()); }
+function sendMap(){  return byClient(sendLedger()); }
+const SEND_STALE=7;   // 検閲・捺印は数日で戻る前提。これを超えたら朱
 
 /* 判断の履歴：#判断 の行を全部、新しい順。これが年をまたいで効く資産なので消さない */
 function decisionLog(){
@@ -2988,7 +3006,7 @@ function meCollect(){
   return out.sort((a,b)=>b.ms-a.ms);                       // 新しい順
 }
 /* メモ本文を1行ずつ組む。やることはその場で押せるチェックに、#預り/#返却 は色を付ける */
-const TAG_CLS={"#預り":"hold","#返却":"back","#論点":"issue","#判断":"judge"};
+const TAG_CLS={"#預り":"hold","#返却":"back","#論点":"issue","#判断":"judge","#提出":"send","#戻り":"ret"};
 /* メモに貼ったURL（Driveのファイル・フォルダなど）を開けるようにする。
    資料そのものはアプリに溜めない＝置き場所はDrive/vaultのまま、という方針の実装 */
 function linkify(html){
@@ -2999,7 +3017,7 @@ function linkify(html){
   });
 }
 function tagHTML(raw,q){
-  return linkify(hlt(raw,q).replace(/#(預り|返却|論点|判断)/g,m=>`<span class="me-tag ${TAG_CLS[m]}">${m}</span>`));
+  return linkify(hlt(raw,q).replace(/#(預り|返却|論点|判断|提出|戻り)/g,m=>`<span class="me-tag ${TAG_CLS[m]}">${m}</span>`));
 }
 function meBodyHTML(memo,q,src){
   return String(memo||"").split(/\r?\n/).map((raw,i)=>{
@@ -3016,10 +3034,10 @@ function meBodyHTML(memo,q,src){
 /* 台帳ボード：全顧問先を横断して、まだ閉じていないものだけを並べる。
    これが頭の中に置いておけない部分。期間は効かせない（未処理に期限はない） */
 function meLedgerBoardHTML(kind){
-  const isHold=kind==="hold";
-  const pair=isHold?TAG_PAIRS[0]:TAG_PAIRS[1];
+  const isHold=kind==="hold", isSend=kind==="send", isIssue=kind==="issue";
+  const pair=isHold?TAG_PAIRS[0]:(isSend?TAG_PAIRS[2]:TAG_PAIRS[1]);
   const q=meQ.trim().toLowerCase();
-  let all=isHold?holdLedger():issueLedger();
+  let all=isHold?holdLedger():(isSend?sendLedger():issueLedger());
   if(meCli) all=all.filter(h=>h.clientId===meCli);
   const hit=x=>{
     if(!q) return true;
@@ -3028,7 +3046,11 @@ function meLedgerBoardHTML(kind){
   };
   all=all.filter(hit);
 
-  const note=isHold
+  const note=isSend
+    ? `<div class="hd-note"><b>#提出</b> より新しい <b>#戻り</b> がない＝<b>いま自分の手を離れているもの</b>。<br>
+        1次検閲・2次検閲・署名税理士・確定日付・顧問先の捺印など、<b>戻ってこないと次に進めないもの</b>を書きます。<br>
+        例：<b>#提出 1次検閲</b> → 戻ったら <b>#戻り 1次検閲</b>。期間の絞り込みは効きません。</div>`
+    : isHold
     ? `<div class="hd-note"><b>#預り</b> より新しい <b>#返却</b> がない＝まだ手元にあるもの。<br>
         <b>#返却</b>（ラベルなしでその顧問先を全部）または <b>#返却 決算書</b> で閉じます。期間の絞り込みは効きません。</div>`
     : `<div class="hd-note"><b>#論点</b> より新しい <b>#判断</b> がない＝まだ答えを出していないもの。<br>
@@ -3040,7 +3062,8 @@ function meLedgerBoardHTML(kind){
   if(all.length===0){
     body+=`<div class="hint" style="margin:18px 4px">${q||meCli
       ? `該当する${pair.noun}はありません。`
-      : (isHold?"預かったままの書類はありません。":"未解決の論点はありません。")}</div>`;
+      : (isHold?"預かったままの書類はありません。"
+         :(isSend?"出したまま戻っていないものはありません。":"未解決の論点はありません。"))}</div>`;
   }else{
     const m=byClient(all);
     const order=[...m.entries()].sort((a,b)=>a[1][0].ms-b[1][0].ms);
@@ -3049,8 +3072,8 @@ function meLedgerBoardHTML(kind){
       body+=`<div class="hd-cli"><span class="me-dot" style="background:${c.color}"></span>
         ${esc((c.code?c.code+" ":"")+c.name)}<span class="n">${list.length}件</span></div>`;
       for(const h of list){
-        const d=new Date(h.ms), age=daysAgo(h.ms), stale=isHold?age>=14:age>=30;
-        body+=`<div class="hd-row${stale?" stale":""}${isHold?"":" issue"}" data-ms="${h.ms}">
+        const d=new Date(h.ms), age=daysAgo(h.ms), stale=isHold?age>=14:(isSend?age>=SEND_STALE:age>=30);
+        body+=`<div class="hd-row${stale?" stale":""}${isHold?"":(isSend?" send":" issue")}" data-ms="${h.ms}">
           <span class="hd-label">${hlt(h.label,meQ)}</span>
           <span class="hd-when">${d.getMonth()+1}/${d.getDate()}</span>
           <span class="hd-age">${agoLabel(h.ms)}</span></div>`;
@@ -3059,7 +3082,7 @@ function meLedgerBoardHTML(kind){
   }
 
   // 判断の履歴は論点モードにだけ添える（閉じたあとも読み返す資産なので）
-  if(!isHold){
+  if(isIssue){
     let log=decisionLog();
     if(meCli) log=log.filter(x=>x.clientId===meCli);
     log=log.filter(hit);
@@ -3100,7 +3123,7 @@ function renderMemoView(){
     .map(([k,l])=>`<button class="me-chip${mePeriod===k?" on":""}" data-p="${k}">${l}</button>`).join("");
   const groups=[["date","日付"],["client","顧問先"],["task","業務"]]
     .map(([k,l])=>`<button data-g="${k}" class="${meGroup===k?"on":""}">${l}</button>`).join("");
-  const modes=[["all","メモ"],["todo","未完"],["hold","預り"],["issue","論点"]]
+  const modes=[["all","メモ"],["todo","未完"],["hold","預り"],["issue","論点"],["send","提出"]]
     .map(([k,l])=>`<button data-m="${k}" class="${meMode===k?"on":""}">${l}</button>`).join("");
   // 絞り込みの選択肢は「メモが実在する顧問先・業務」だけを出す
   const cliSet=new Set(), taskSet=new Set();
@@ -3151,12 +3174,16 @@ function renderMemoView(){
 function renderMemoList(){
   // 預り中は台帳ボード。期間・グループの概念がないので早い段階で分岐する
   const pr=document.getElementById("mePeriodRow"), ts=document.getElementById("meTaskSel");
-  const board = meMode==="hold"||meMode==="issue";
+  const board = meMode==="hold"||meMode==="issue"||meMode==="send";
   if(pr) pr.style.display = board ? "none" : "";     // 台帳に期間・グループは効かない
   if(ts) ts.style.display = board ? "none" : "";
-  if(meMode==="hold"||meMode==="issue"){
+  if(board){
     document.getElementById("meList").innerHTML=meLedgerBoardHTML(meMode);
-    if(meMode==="hold"){
+    if(meMode==="send"){
+      const L=sendLedger(), stale=L.filter(h=>daysAgo(h.ms)>=SEND_STALE).length;
+      document.getElementById("meMeta").innerHTML=
+        `出したまま戻っていないもの ${L.length}件${stale?` ・ <b style="color:var(--shu)">${SEND_STALE}日以上 ${stale}件</b>`:""}`;
+    }else if(meMode==="hold"){
       const L=holdLedger(), stale=L.filter(h=>daysAgo(h.ms)>=14).length;
       document.getElementById("meMeta").innerHTML=
         `預かったままの書類 ${L.length}件${stale?` ・ <b style="color:var(--shu)">14日以上 ${stale}件</b>`:""}`;
@@ -3506,6 +3533,12 @@ function buildAuditMaterial(clientId, s, e, label){
   L.push("## お預かり中の書類");
   if(!holds.length) L.push("（なし）");
   else for(const h of holds) L.push(`- ${h.label} … ${dateKey(new Date(h.ms))} お預かり・${agoLabel(h.ms)}${daysAgo(h.ms)>=14?" ★14日以上":""}`);
+  L.push("");
+
+  const sends=sendMap().get(clientId)||[];
+  L.push("## 出したまま戻っていないもの（検閲・捺印・確定日付など）");
+  if(!sends.length) L.push("（なし）");
+  else for(const x of sends) L.push(`- ${x.label} … ${dateKey(new Date(x.ms))} 提出・${agoLabel(x.ms)}${daysAgo(x.ms)>=SEND_STALE?" ★"+SEND_STALE+"日以上":""}`);
   L.push("");
 
   const issues=issueMap().get(clientId)||[];
