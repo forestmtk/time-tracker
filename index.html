@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>工数ログ</title>
+<!-- PWA（v2026-08-18i）。manifest とアイコン3枚は index.html と同じ階層に置くこと。
+     インストールすると File System Access の権限が自動で永続する＝朝の保存バナーが消える。
+     サービスワーカーは置いていない（＝オフラインでは開けないが、開けば必ず最新版が来る） -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   :root{
     /* --- 業務日報 / 台帳の質感 --- */
@@ -901,7 +907,7 @@
 
 /* 公開版が古いままかを、その場で判別するための版数。
    index.html を差し替えるたびに必ず更新すること（日付＋a,b,c…） */
-const APP_VER = "2026-08-18h";
+const APP_VER = "2026-08-18i";
 const STORE_KEY = "timeTracker.v1";
 const VIEW_START_H = 6;    // タイムライン表示開始
 const VIEW_END_H   = 22;   // 表示終了
@@ -974,6 +980,26 @@ function save(){
 }
 function storageBytes(){
   try{ return new Blob([localStorage.getItem(STORE_KEY)||""]).size; }catch(e){ return 0; }
+}
+/* ---------- PWA（インストール状態と保存領域の永続化） ----------
+   目的は2つ。①インストール済みなら File System Access の権限が自動で永続する
+   （＝朝の保存バナーが出なくなる）。②storage.persist() で保存領域をLRU削除から守る。
+   どちらも「効いているか」が画面から見えないと確認しようがないので、
+   設定→データ に状態を出す。値は非同期なので起動時に一度だけ取る。 */
+let pwaInstalled = false;      // 独立ウィンドウで動いているか
+let storagePersisted = null;   // true/false/null(未判定・非対応)
+function probePWA(){
+  try{
+    pwaInstalled = !!(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches)
+                || !!(window.navigator && window.navigator.standalone);
+  }catch(e){ pwaInstalled=false; }
+  try{
+    if(navigator.storage && navigator.storage.persist){
+      // インストール済みアプリでは自動で許可される。未インストールでも要求だけはしておく
+      navigator.storage.persist().then(v=>{ storagePersisted = !!v; })
+        .catch(()=>{ storagePersisted = null; });
+    }
+  }catch(e){ storagePersisted = null; }
 }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 /* 記録を触った日は「保存済み」印を外し、翌起動で自動保存し直す */
@@ -3881,6 +3907,13 @@ function paneRender(t){
             ? "上限が近づいています。古い記録の整理か、バックアップを書き出してからの削除を検討してください。"
             : "画像やファイルはここに入れず、DriveやvaultのURLをメモに貼る運用にしています。"}</div>
           ${saveFailed?`<div class="sv-note" style="color:var(--shu);font-weight:700">⚠ 直前の保存に失敗しています。バックアップを書き出してください。</div>`:""}
+          <div class="sv-row"><span>アプリとして起動しているか</span>
+            <b class="mono${pwaInstalled?"":" bad"}">${pwaInstalled?"はい（独立ウィンドウ）":"いいえ（タブ）"}</b></div>
+          <div class="sv-row"><span>保存領域の永続化</span>
+            <b class="mono${storagePersisted===true?"":" bad"}">${storagePersisted===true?"有効":(storagePersisted===false?"無効":"未判定")}</b></div>
+          <div class="sv-note${pwaInstalled&&storagePersisted===true?" ok":""}">${pwaInstalled&&storagePersisted===true
+            ? "インストール済みです。Obsidianフォルダの権限も永続するので、朝の保存バナーは出ないはずです。"
+            : "ブラウザのアドレスバー右のインストールボタン（Edge/Chrome）からアプリとして入れると、Obsidianフォルダの権限が毎回聞かれなくなり、保存領域も消えにくくなります。"}</div>
         </div>`; })()}
       <button class="btn-fill" id="expBtn" style="width:100%;margin:4px 0 10px">バックアップを書き出す（JSON）</button>
       <label class="btn-ghost" style="display:block;width:100%;text-align:center;box-sizing:border-box">バックアップを読み込む
@@ -4212,6 +4245,7 @@ syncHeaderH();
 window.addEventListener("resize",syncHeaderH);
 
 /* 初期化 */
+probePWA();
 renderAll();
 scrollToRelevant();
 if(!checkStaleRunning()) autoSaveYesterday();   // 締め忘れが無ければ前日分を自動保存
