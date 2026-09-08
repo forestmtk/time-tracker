@@ -435,6 +435,20 @@
   .cl-cli{display:flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap;max-width:210px;overflow:hidden}
   .cl-cli .dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
   .cl-cli .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis}
+  .cl-ck{display:inline-block;margin-left:16px;margin-top:2px;padding:1px 7px;border-radius:6px;
+    font-size:11px;line-height:1.5;cursor:pointer;white-space:nowrap;border:1px solid transparent}
+  .cl-ck.warn{background:rgba(220,74,46,.10);color:#9E3520;border-color:rgba(220,74,46,.30)}
+  .cl-ck.ok{background:#EAF3DE;color:#3B6D11;border-color:#C0DD97}
+  .cl-ck.none{color:var(--figure);border-color:var(--rule-strong)}
+  .ck-cli{display:flex;align-items:center;gap:8px;margin:2px 2px 10px}
+  .ck-cli .dot{width:10px;height:10px;border-radius:3px}
+  .ck-kinds{display:flex;gap:8px}
+  .ck-k{flex:1;height:38px;border:1px solid var(--rule-strong);border-radius:8px;background:var(--paper-2);font-size:14px}
+  .ck-k.on{border-color:var(--shu);background:var(--shu-soft);color:#9E3520;font-weight:700}
+  .ck-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .ck-row .ck-n{width:30px;font-size:12px;color:var(--figure)}
+  .ck-row .ck-d{flex:0 0 96px;font-size:12px;color:var(--ink-soft)}
+  .ck-row .ck-a{flex:1;height:36px;border:1px solid var(--rule-strong);border-radius:8px;padding:0 8px;text-align:right}
   .cl-fy{font-family:var(--font-mono);font-size:10.5px;color:var(--figure);flex:0 0 auto}
   .cl-cell{width:100%;height:24px;border-radius:6px;border:1px solid var(--rule-strong);background:var(--paper);
     font-size:10.5px;font-weight:700;color:var(--figure);cursor:pointer;line-height:1}
@@ -910,7 +924,7 @@
 
 /* 公開版が古いままかを、その場で判別するための版数。
    index.html を差し替えるたびに必ず更新すること（日付＋a,b,c…） */
-const APP_VER = "2026-09-08b";
+const APP_VER = "2026-09-08c";
 const STORE_KEY = "timeTracker.v1";
 const VIEW_START_H = 6;    // タイムライン表示開始
 const VIEW_END_H   = 22;   // 表示終了
@@ -2452,6 +2466,71 @@ function shiftWeekend(d){                                            // 土日�
   if(w===6) x.setDate(x.getDate()+2); else if(w===0) x.setDate(x.getDate()+1);
   return x;
 }
+
+/* ============================================================
+   消費税の中間申告（消法42・43、タックスアンサー No.6609）
+   期限＝各中間申告対象期間の末日の翌日から2か月以内。
+     年1回（前課税期間の確定消費税額 国税分 48万円超〜400万円以下）… 決算月+8 の月末
+     年3回（400万円超〜4,800万円以下）                            … 決算月+5 / +8 / +11 の月末
+     年11回（4,800万円超）は1回目に特例があり単純な +N では出ない。ここでは扱わない。
+
+   期限が休日に当たるときは翌日（国通法10②・国通令2②）。
+   休日＝日曜・国民の祝日・その他一般の休日・土曜・12/29〜12/31。
+   1/2・1/3 は「一般の休日」に当たる（通則法基本通達10条関係4、昭33.6.2最高判）。
+
+   固定日の祝日だけを見ている。移動祝日（成人の日・海の日・敬老の日・
+   スポーツの日・春分・秋分）はいずれも月の8〜23日にしか来ないので、
+   月末とその直後の数日が対象のこの用途では当たらない。
+============================================================ */
+const FIXED_HOLIDAYS={"1-1":1,"2-11":1,"2-23":1,"4-29":1,"5-3":1,"5-4":1,"5-5":1,"8-11":1,"11-3":1,"11-23":1};
+/* 国民の祝日（固定日のみ）。振替休日の起点になるのはこれだけ */
+function isNationalHoliday(d){ return !!FIXED_HOLIDAYS[(d.getMonth()+1)+"-"+d.getDate()]; }
+/* 祝日＋一般の休日。12/29〜31 は国通令2②、1/2・1/3 は一般の休日（通達10条関係4） */
+function isFixedHoliday(d){
+  const m=d.getMonth()+1, dd=d.getDate();
+  if(m===12 && dd>=29) return true;
+  if(m===1 && (dd===2||dd===3)) return true;
+  return isNationalHoliday(d);
+}
+/* 振替休日：直前が日曜の「国民の祝日」で、そこから当日まで祝日が続いているとき（祝日法3②）。
+   年末年始は国民の祝日ではないので、1/3が日曜でも1/4は振替休日にならない */
+function isSubstituteHoliday(d){
+  if(isFixedHoliday(d)) return false;
+  const x=new Date(d);
+  for(let i=0;i<4;i++){
+    x.setDate(x.getDate()-1);
+    if(!isNationalHoliday(x)) return false;
+    if(x.getDay()===0) return true;
+  }
+  return false;
+}
+function isClosedDay(d){
+  const w=d.getDay();
+  return w===0 || w===6 || isFixedHoliday(d) || isSubstituteHoliday(d);
+}
+/* 休日でない最初の日まで送る。土日しか見ない shiftWeekend とは別物 */
+function shiftDue(d){
+  const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  let guard=0;
+  while(isClosedDay(x) && guard++<20) x.setDate(x.getDate()+1);
+  return x;
+}
+const CHUKAN_KINDS=["未確認","なし","年1回","年3回"];
+function chukanOffsets(kind){ return kind==="年1回"?[8] : kind==="年3回"?[5,8,11] : []; }
+/* basedOn は "YYYY-MM"（その決算期の期末）。そこから +N か月の月末を順延して返す */
+function chukanDues(basedOn, kind){
+  const m=/^(\d{4})-(\d{2})$/.exec(String(basedOn||"")); if(!m) return [];
+  const y=+m[1], mo=+m[2]-1;
+  return chukanOffsets(kind).map(n=>dateKey(shiftDue(monthEnd(y,mo+n))));
+}
+function chukanOf(c){ return (c&&c.chukan)||null; }
+/* 期末を過ぎたのに basedOn が更新されていない＝未登録。2026-07 に1年間チェックリストから漏れた先と同じ穴に落ちないための検知 */
+function chukanStale(c, base){
+  if(!c||!c.fy) return false;
+  const ch=chukanOf(c); if(!ch||!ch.basedOn||ch.kind==="未確認") return true;
+  const cl=currentClosing(c, base); if(!cl) return false;
+  return ch.basedOn < cl.key.split("|")[1];
+}
 /* いま走っている決算期を返す（期末月の前月〜申告期限+15日）。無ければ null */
 function currentClosing(c, base){
   if(!c || !c.fy) return null;
@@ -2522,12 +2601,23 @@ function closingRows(base){
   }
   return rows.sort((a,b)=>a.cl.due-b.cl.due);
 }
+function chukanBadgeHTML(c, base){
+  const ch=chukanOf(c);
+  const stale=chukanStale(c, base);
+  if(stale) return `<span class="cl-ck warn" data-cid="${c.id}" title="消費税中間が未確認。押すと登録できます">中間 未確認</span>`;
+  if(!ch || ch.kind==="なし") return `<span class="cl-ck none" data-cid="${c.id}" title="消費税の中間申告なし。押すと直せます">中間なし</span>`;
+  const today=dateKey(new Date());
+  const next=(ch.rows||[]).map(r=>r.due).filter(d=>d>=today).sort()[0];
+  const lbl=next ? `${ch.kind} 次 ${next.slice(5).replace("-","/")}` : `${ch.kind}`;
+  return `<span class="cl-ck ok" data-cid="${c.id}" title="押すと直せます">${esc(lbl)}</span>`;
+}
 function closingRowHTML(r, today){
   const left=Math.round((startOfDay(r.cl.due).getTime()-today)/86400000);
   let h=`<tr><td class="l"><span class="cl-cli" data-cid="${r.c.id}">
       <span class="dot" style="background:${r.c.color}"></span>
       <span class="nm">${esc((r.c.code?r.c.code+" ":"")+r.c.name)}</span>
-      <span class="cl-fy">${r.c.fy}月期${r.c.ext?"・延長":""}</span></span></td>`;
+      <span class="cl-fy">${r.c.fy}月期${r.c.ext?"・延長":""}</span></span>
+      ${chukanBadgeHTML(r.c, new Date(today))}</td>`;
   for(const st of CLOSE_STAGES){
     const v=closingVal(r.cl.key,st.k);
     const a=v===0 ? r.auto[st.k] : null;
@@ -2687,7 +2777,16 @@ function renderAnalysis(){
   const cp=document.getElementById("anaCopy");
   if(cp) cp.onclick=()=>copyText(buildMonthSummaryText(anaMonth,cliRows),null);
   anaInner.querySelectorAll(".sum-row.clickable").forEach(el=>el.onclick=()=>openClientHistory(el.dataset.cid));
-  anaInner.querySelectorAll(".cl-cell").forEach(b=>b.onclick=()=>{ closingBump(b.dataset.key,b.dataset.st,b.dataset.auto||""); renderAnalysis(); });
+  anaInner.querySelectorAll(".cl-cell").forEach(b=>b.onclick=()=>{
+    closingBump(b.dataset.key,b.dataset.st,b.dataset.auto||"");
+    // 報告・捺印を「完了」にした瞬間が、確定した消費税額が手元にある唯一のタイミング（設計メモ2-1）
+    const openCk = b.dataset.st==="e"
+      && closingVal(b.dataset.key,"e")===2
+      && chukanStale(getClient(b.dataset.key.split("|")[0]), new Date());
+    renderAnalysis();
+    if(openCk) openChukanSheet(b.dataset.key.split("|")[0],
+      {fromStamp:true, basedOn:b.dataset.key.split("|")[1]});
+  });
   // 行の「完了」＝最終工程を完了にして畳む（終わった決算の棚卸し用）
   anaInner.querySelectorAll(".cl-fin").forEach(b=>b.onclick=()=>{
     const st=closingState(); if(!st[b.dataset.key]) st[b.dataset.key]={};
@@ -2695,6 +2794,7 @@ function renderAnalysis(){
     save(); renderAnalysis();
   });
   anaInner.querySelectorAll(".cl-cli").forEach(el=>el.onclick=()=>openClientHistory(el.dataset.cid,"memo"));
+  anaInner.querySelectorAll(".cl-ck").forEach(el=>el.onclick=(ev)=>{ ev.stopPropagation(); openChukanSheet(el.dataset.cid); });
   anaInner.querySelectorAll(".cl-fy-sel").forEach(sel=>sel.onchange=()=>{
     const c=getClient(sel.dataset.cid); const v=parseInt(sel.value,10);
     const cb=anaInner.querySelector(`.cl-ext-cb[data-cid="${sel.dataset.cid}"]`);
@@ -3551,6 +3651,71 @@ function renderMemoList(){
   };
 }
 
+/* ============================================================
+   消費税中間の登録シート
+   確定した消費税額が手元にあるのは決算報告・署名の場だけなので、
+   ボードの「報告・捺印」を完了にした流れで開く。札からはいつでも開ける。
+============================================================ */
+function openChukanSheet(clientId, opts){
+  const c=getClient(clientId); if(!c) return;
+  opts=opts||{};
+  const cl=currentClosing(c, new Date());
+  const cur=chukanOf(c)||{};
+  let kind=(cur.kind && cur.kind!=="未確認") ? cur.kind : "";
+  let basedOn=opts.basedOn || (cl?cl.key.split("|")[1]:(cur.basedOn||""));
+  const amtOf=due=>{ const r=(cur.rows||[]).find(x=>x.due===due); return r?r.amount:null; };
+
+  sheetHead.innerHTML=`<button class="back" id="ckBack">‹</button><h2>消費税の中間申告</h2>`;
+  document.getElementById("ckBack").onclick=closeSheet;
+
+  function draw(){
+    const dues=chukanDues(basedOn, kind);
+    const rows=dues.map((d,i)=>{
+      const v=amtOf(d);
+      const ph=i===0?"金額を入れる":"空欄なら第1期と同額";
+      return `<div class="ck-row">
+        <span class="ck-n">${i+1}期</span>
+        <span class="ck-d mono">${d}</span>
+        <input class="ck-a mono" data-due="${d}" inputmode="numeric" placeholder="${ph}" value="${v==null?"":v}">
+      </div>`;
+    }).join("");
+    sheetBody.innerHTML=`
+      <div class="ck-cli"><span class="dot" style="background:${c.color}"></span>
+        <b>${esc((c.code?c.code+" ":"")+c.name)}</b>
+        <span class="hint">${c.fy?c.fy+"月期":""}</span></div>
+      ${opts.fromStamp?`<div class="hint" style="margin:2px 2px 10px">報告・捺印を完了にしました。確定した消費税額が手元にあるのはいまだけです。</div>`:""}
+      <div class="field"><label>区分</label>
+        <div class="ck-kinds">${["年3回","年1回","なし"].map(k=>
+          `<button class="ck-k${kind===k?" on":""}" data-k="${k}">${k}</button>`).join("")}</div></div>
+      <div class="field"><label>どの決算に基づくか</label>
+        <input id="ckBase" class="mono" value="${esc(basedOn)}" placeholder="2026-06"></div>
+      ${kind&&kind!=="なし"?`<div class="field"><label>納期限と金額</label>${rows}
+        <div class="hint">期限は決算月と区分から出しています。土日・祝日・12/29〜1/3は翌開庁日に送っています（国通法10②）。</div></div>`:""}
+      ${kind==="なし"?`<div class="hint" style="margin:6px 2px">中間申告なしとして登録します。翌期に確定税額が閾値を超えれば復活するので、次の決算でもう一度確認してください。</div>`:""}
+      <div class="actions">
+        <button class="btn-fill" id="ckSave"${kind?"":" disabled"}>登録する</button>
+        <button id="ckLater">後で</button>
+      </div>`;
+    sheetBody.querySelectorAll(".ck-k").forEach(b=>b.onclick=()=>{ kind=b.dataset.k; draw(); });
+    const be=document.getElementById("ckBase");
+    if(be) be.onchange=()=>{ basedOn=be.value.trim(); draw(); };
+    document.getElementById("ckLater").onclick=closeSheet;
+    document.getElementById("ckSave").onclick=()=>{
+      if(!kind){ toast("区分を選んでください"); return; }
+      if(kind!=="なし" && !/^\d{4}-\d{2}$/.test(basedOn)){ toast("基づく決算を YYYY-MM で入れてください"); return; }
+      const amts=[...sheetBody.querySelectorAll(".ck-a")].map(i=>{
+        const n=parseInt(String(i.value).replace(/[^\d-]/g,""),10); return isNaN(n)?null:n;
+      });
+      const first=amts.length?amts[0]:null;
+      c.chukan={ kind, basedOn,
+        rows: chukanDues(basedOn,kind).map((d,i)=>({due:d, amount: amts[i]==null?first:amts[i]})) };
+      save(); closeSheet(); renderAnalysis(); renderAll();
+      toast(kind==="なし"?"中間なしとして登録しました":`${kind}で登録しました`);
+    };
+  }
+  draw(); openSheet();
+}
+
 function openClientHistory(clientId, view){
   const c=getClient(clientId);
   if(view) chView=view;          // ブリーフの「メモ」ボタンからは最初からメモタブで開く
@@ -4163,7 +4328,8 @@ function exportSetup(){
   const payload={
     type:"time-tracker-setup", ver:APP_VER, at:dateKey(new Date()),
     clients:state.clients.filter(c=>c.kind==="client")
-      .map(c=>({code:c.code,name:c.name,color:c.color,fy:c.fy||null,ext:!!c.ext})),
+      .map(c=>({code:c.code,name:c.name,color:c.color,fy:c.fy||null,ext:!!c.ext,
+                chukan:c.chukan||null})),
     tasks:{client:[...state.tasks.client], internal:[...state.tasks.internal]}
   };
   try{
@@ -4186,9 +4352,12 @@ function importSetup(file){
       if(!c.code) continue;
       const ex=state.clients.find(x=>x.kind==="client"&&x.code===String(c.code));
       if(ex){ ex.name=c.name||ex.name; if(c.color) ex.color=c.color;
-              if(c.fy){ ex.fy=c.fy; ex.ext=!!c.ext; } upd++; }
+              if(c.fy){ ex.fy=c.fy; ex.ext=!!c.ext; }
+              if(c.chukan && c.chukan.kind) ex.chukan=c.chukan;   // 空で上書きしない（この端末の登録を消さない）
+              upd++; }
       else{ state.clients.push({id:uid(),kind:"client",code:String(c.code),name:c.name||"(無名)",
-              color:c.color||nextColor(), ...(c.fy?{fy:c.fy,ext:!!c.ext}:{})}); add++; }
+              color:c.color||nextColor(), ...(c.fy?{fy:c.fy,ext:!!c.ext}:{}),
+              ...(c.chukan&&c.chukan.kind?{chukan:c.chukan}:{})}); add++; }
     }
     if(s.tasks){                                   // 業務は足す方向だけ（この端末で使っている名前は消さない）
       for(const k of ["client","internal"]){
